@@ -1,0 +1,94 @@
+# ConsistenCy 2.0 - Pre-commit 配置
+# 安装: pre-commit install
+# 运行所有检查: pre-commit run --all-files
+
+repos:
+  # ==================== 代码格式化 ====================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
+    hooks:
+      # Ruff linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        stages: [pre-commit]
+      # Ruff formatter
+      - id: ruff-format
+        stages: [pre-commit]
+
+  # ==================== 类型检查 ====================
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.5.0
+          - pydantic-settings>=2.1.0
+          - types-pyyaml
+          - types-requests
+          - types-toml
+        args: [--strict, --ignore-missing-imports]
+        stages: [pre-commit]
+
+  # ==================== 通用检查 ====================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # 文件结束符
+      - id: end-of-file-fixer
+      # 去除行尾空格
+      - id: trailing-whitespace
+      # 检查合并冲突标记
+      - id: check-merge-conflict
+      # 检查 JSON 格式
+      - id: check-json
+      # 检查 TOML 格式
+      - id: check-toml
+      # 检查 YAML 格式
+      - id: check-yaml
+      # 检查大文件
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      # 检查可执行文件是否有 shebang
+      - id: check-executables-have-shebangs
+      # 检查 shebang 是否可执行
+      - id: check-shebang-scripts-are-executable
+      # 禁止提交到特定分支
+      - id: no-commit-to-branch
+        args: [--branch, main, --branch, master]
+
+  # ==================== 安全扫描 ====================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml, -r, consistancy/]
+        additional_dependencies: ["bandit[toml]"]
+        stages: [pre-commit]
+
+  # ==================== Git 消息规范 ====================
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # ==================== 拼写检查 ====================
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args: [--write-changes, --skip="*.lock,*.json"]
+        stages: [pre-commit]
+
+  # ==================== ConsistenCy 自身 ====================
+  # 本地 hooks，在开发 ConsistenCy 自身时启用
+  - repo: local
+    hooks:
+      - id: consistancy-check
+        name: ConsistenCy Code Health Check
+        entry: python -m consistancy.main analyze
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+        verbose: true

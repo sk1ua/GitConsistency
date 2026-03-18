@@ -1,0 +1,295 @@
+# ConsistenCy 2.0 - GitHub Actions 工作流
+# 自动在 PR 上运行代码健康检查并发布评论
+
+name: 🔍 ConsistenCy Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**.py"
+      - "**.js"
+      - "**.ts"
+      - "**.go"
+      - "**.java"
+      - "**.yml"
+      - "**.yaml"
+      - "**.json"
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "干运行模式（不发布评论）"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      project_path:
+        description: "分析路径"
+        required: false
+        default: "."
+
+# 权限配置
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+  statuses: write
+
+# 并发控制：同一 PR 的多个运行会排队
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "0.5.x"
+
+jobs:
+  # ===========================================================================
+  # 代码健康检查
+  # ===========================================================================
+  code-health:
+    name: 🔍 Code Health Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      # -----------------------------------------------------------------------
+      # 检出代码
+      # -----------------------------------------------------------------------
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史进行变更分析
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      # -----------------------------------------------------------------------
+      # 检出 base 分支（用于 diff）
+      # -----------------------------------------------------------------------
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }} --depth=1
+
+      # -----------------------------------------------------------------------
+      # 设置 Python
+      # -----------------------------------------------------------------------
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # -----------------------------------------------------------------------
+      # 安装 uv
+      # -----------------------------------------------------------------------
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # -----------------------------------------------------------------------
+      # 安装 ConsistenCy
+      # -----------------------------------------------------------------------
+      - name: Install ConsistenCy
+        run: |
+          uv venv
+          uv pip install -e "."
+
+      # -----------------------------------------------------------------------
+      # 运行 ConsistenCy 分析
+      # -----------------------------------------------------------------------
+      - name: Run ConsistenCy Analysis
+        id: consistancy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          LITELLM_MODEL: ${{ vars.LITELLM_MODEL || 'deepseek/deepseek-chat' }}
+          GITNEXUS_MCP_URL: ${{ secrets.GITNEXUS_MCP_URL }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          source .venv/bin/activate
+          
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            consistancy ci \
+              --event pull_request \
+              --pr ${{ github.event.pull_request.number }} \
+              ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+          else
+            consistancy analyze ${{ github.event.inputs.project_path || '.' }} \
+              --format markdown \
+              --output report.md
+          fi
+
+      # -----------------------------------------------------------------------
+      # 上传报告
+      # -----------------------------------------------------------------------
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consistancy-report-${{ github.run_id }}
+          path: |
+            report.md
+            .cache/consistancy/
+            data/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # -----------------------------------------------------------------------
+      # 上传 Markdown 摘要
+      # -----------------------------------------------------------------------
+      - name: Upload Summary
+        if: github.event_name == 'push' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consistancy-summary
+          path: report.md
+          retention-days: 30
+
+  # ===========================================================================
+  # 快速检查（ruff + mypy）
+  # ===========================================================================
+  lint:
+    name: 🧹 Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dev dependencies
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+
+      - name: Ruff check
+        run: |
+          source .venv/bin/activate
+          ruff check consistancy/
+
+      - name: Ruff format check
+        run: |
+          source .venv/bin/activate
+          ruff format --check consistancy/
+
+      - name: MyPy type check
+        run: |
+          source .venv/bin/activate
+          mypy consistancy/
+
+  # ===========================================================================
+  # 测试
+  # ===========================================================================
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/ -v --cov=consistancy --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: matrix.python-version == '3.12'
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ===========================================================================
+  # 构建和发布（仅 main 分支）
+  # ===========================================================================
+  build:
+    name: 📦 Build Package
+    runs-on: ubuntu-latest
+    needs: [code-health, lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build package
+        run: |
+          uv venv
+          uv pip install build
+          source .venv/bin/activate
+          python -m build
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: consistancy-package
+          path: dist/
+          retention-days: 7
+
+  # ===========================================================================
+  # 发布到 PyPI（仅标签推送）
+  # ===========================================================================
+  publish:
+    name: 🚀 Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/consistancy
+    
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@v4
+        with:
+          name: consistancy-package
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

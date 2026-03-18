@@ -1,0 +1,137 @@
+# ConsistenCy 2.0 - Docker Compose 配置
+# 支持：本地开发、CI/CD、Dashboard 独立运行
+
+version: "3.8"
+
+services:
+  # ==================== 核心 CLI 服务 ====================
+  consistancy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: consistancy:latest
+    container_name: consistancy-cli
+    env_file:
+      - .env
+    volumes:
+      # 挂载代码仓库进行分析
+      - type: bind
+        source: ${TARGET_REPO:-.}
+        target: /repo
+        read_only: true
+      # 缓存目录
+      - consistancy-cache:/app/.cache
+    working_dir: /repo
+    command: ["analyze", "/repo", "--format", "markdown"]
+    networks:
+      - consistancy-net
+
+  # ==================== 开发环境 ====================
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: consistancy:dev
+    container_name: consistancy-dev
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - consistancy-cache:/app/.cache
+      - /app/.venv  # 匿名卷，避免覆盖虚拟环境
+    stdin_open: true
+    tty: true
+    command: ["bash"]
+    networks:
+      - consistancy-net
+
+  # ==================== Streamlit Dashboard ====================
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dashboard
+    image: consistancy:dashboard
+    container_name: consistancy-dashboard
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    volumes:
+      # 分析目标仓库
+      - type: bind
+        source: ${TARGET_REPO:-.}
+        target: /repo
+        read_only: true
+      # 持久化数据
+      - consistancy-data:/app/data
+      - consistancy-cache:/app/.cache
+    environment:
+      - CONSISTANCY_REPO_PATH=/repo
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+    networks:
+      - consistancy-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ==================== 测试运行器 ====================
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: consistancy:dev
+    container_name: consistancy-test
+    volumes:
+      - .:/app
+      - consistancy-cache:/app/.cache
+    command: ["pytest", "-v", "--cov=consistancy", "--cov-report=term-missing"]
+    networks:
+      - consistancy-net
+    profiles:
+      - testing  # 只在显式指定时运行
+
+  # ==================== GitHub Actions 模拟器 ====================
+  github-action:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: consistancy:latest
+    container_name: consistancy-gh-action
+    env_file:
+      - .env
+    environment:
+      - GITHUB_EVENT_NAME=pull_request
+      - GITHUB_ACTIONS=true
+    volumes:
+      - type: bind
+        source: ${TARGET_REPO:-.}
+        target: /github/workspace
+        read_only: true
+      - consistancy-cache:/app/.cache
+    working_dir: /github/workspace
+    command: ["ci", "--event", "pull_request"]
+    networks:
+      - consistancy-net
+    profiles:
+      - ci
+
+# ==================== 卷定义 ====================
+volumes:
+  consistancy-cache:
+    driver: local
+  consistancy-data:
+    driver: local
+
+# ==================== 网络定义 ====================
+networks:
+  consistancy-net:
+    driver: bridge
