@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any
@@ -120,7 +119,7 @@ Guidelines:
         parts = ["# Code Review Context"]
 
         # 变更统计
-        parts.append(f"\n## Changes")
+        parts.append("\n## Changes")
         parts.append(f"- Files changed: {len(context.files_changed)}")
         parts.append(f"- Lines added: {context.lines_added}")
         parts.append(f"- Lines deleted: {context.lines_deleted}")
@@ -148,11 +147,11 @@ Guidelines:
 
         # 影响分析
         if context.affected_symbols:
-            parts.append(f"\n## Affected Symbols")
+            parts.append("\n## Affected Symbols")
             parts.append(f"- {', '.join(context.affected_symbols[:10])}")
 
         if context.impacted_tests:
-            parts.append(f"\n## Impacted Tests")
+            parts.append("\n## Impacted Tests")
             parts.append(f"- {', '.join(context.impacted_tests[:5])}")
 
         return "\n".join(parts)
@@ -306,11 +305,11 @@ class PromptCache:
     ) -> None:
         """缓存 Prompt."""
         key = self.get_key(context, review_type)
-        
+
         if len(self._cache) >= self._max_size:
             # 简单的 LRU：清空一半
             self._cache = dict(list(self._cache.items())[self._max_size // 2:])
-        
+
         self._cache[key] = messages
 
     def clear(self) -> None:

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from consistancy.config import Settings, get_settings
+from consistancy.config import get_settings
 from consistancy.reviewer.models import (
     CommentCategory,
     ReviewComment,

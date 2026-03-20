@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -115,7 +114,7 @@ class SecurityScanner(BaseScanner):
             扫描结果
         """
         logger.info(f"开始安全扫描: {path}")
-        
+
         findings: list[Finding] = []
         errors: list[str] = []
         scanned_files = 0

@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -71,7 +70,7 @@ class GitNexusCache:
         """检查文件缓存是否有效."""
         if not path.exists():
             return False
-        
+
         mtime = datetime.fromtimestamp(path.stat().st_mtime)
         return datetime.utcnow() - mtime < timedelta(seconds=ttl)
 
@@ -174,7 +173,7 @@ class GitNexusCache:
         file_size = len(list(self.file_cache_dir.glob("*.cache")))
 
         total_file_size = sum(
-            f.stat().st_size 
+            f.stat().st_size
             for f in self.file_cache_dir.glob("*.cache")
         )
 

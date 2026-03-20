@@ -8,7 +8,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import subprocess
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -281,7 +280,7 @@ class GitNexusClient:
             raise GitNexusConnectionError("会话未建立")
 
         url = urljoin(self.mcp_url + "/", f"tools/{msg.method}")
-        
+
         async with self._session.post(
             url,
             json=msg.params,
@@ -310,7 +309,7 @@ class GitNexusClient:
             raise GitNexusResponseError("进程无响应")
 
         response = json.loads(line.decode())
-        
+
         if "error" in response:
             raise GitNexusResponseError(
                 response["error"].get("message", "未知错误"),
@@ -334,7 +333,7 @@ class GitNexusClient:
             知识图谱
         """
         cache_key = self.cache.make_key("analyze", repo_path)
-        
+
         if not force_refresh:
             cached = self.cache.get(cache_key)
             if cached:
@@ -342,7 +341,7 @@ class GitNexusClient:
                 return cached
 
         logger.info(f"开始分析仓库: {repo_path}")
-        
+
         result = await self._call_method(
             "analyze",
             {"repo_path": repo_path},
@@ -356,7 +355,7 @@ class GitNexusClient:
 
         # 缓存结果
         self.cache.set(cache_key, graph)
-        
+
         logger.info(f"图谱分析完成: {graph.node_count} 节点, {graph.edge_count} 边")
         return graph
 
@@ -377,7 +376,7 @@ class GitNexusClient:
             上下文信息
         """
         cache_key = self.cache.make_key("context", file_path, str(line), str(column))
-        
+
         cached = self.cache.get(cache_key)
         if cached:
             return cached
@@ -411,7 +410,7 @@ class GitNexusClient:
             影响分析结果
         """
         cache_key = self.cache.make_key("impact", symbol)
-        
+
         cached = self.cache.get(cache_key)
         if cached:
             return cached
@@ -492,7 +491,7 @@ class GitNexusClient:
             stats_before = self.cache.get_stats()
             self.cache.clear()
             return stats_before["memory_entries"] + stats_before["file_entries"]
-        
+
         # TODO: 实现模式匹配删除
         return 0
 

@@ -8,13 +8,11 @@ from __future__ import annotations
 
 import logging
 import re
-import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 
 from consistancy.scanners.base import BaseScanner, Finding, ScanResult, Severity
 

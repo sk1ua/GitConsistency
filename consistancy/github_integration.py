@@ -12,7 +12,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from consistancy.config import Settings, get_settings
+from consistancy.config import get_settings
 
 logger = logging.getLogger(__name__)
 

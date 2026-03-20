@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -152,7 +151,7 @@ class ReviewResult(BaseModel):
                     lines.append(f"\n**Suggestion**: {comment.suggestion}")
 
         if self.action_items:
-            lines.append(f"\n## Action Items")
+            lines.append("\n## Action Items")
             for item in self.action_items:
                 lines.append(f"- [ ] {item}")
 

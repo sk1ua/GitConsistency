@@ -9,7 +9,6 @@ from typing import Any
 
 import streamlit as st
 
-from consistancy.scanners.base import Severity
 
 
 class Components:
