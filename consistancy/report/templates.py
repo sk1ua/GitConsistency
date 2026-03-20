@@ -2,6 +2,7 @@
 
 提供 Markdown、HTML、JSON 等格式的报告模板.
 """
+# ruff: noqa: W291  # 模板中的行尾空格是 markdown 语法的一部分
 
 from __future__ import annotations
 

@@ -2,6 +2,7 @@
 
 交互式 Web 界面，展示代码健康指标和趋势图表.
 """
+# ruff: noqa: E402  # 需要先修改 sys.path 才能导入本地模块
 
 from __future__ import annotations
 

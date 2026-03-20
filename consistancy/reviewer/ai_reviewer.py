@@ -105,7 +105,7 @@ class AIReviewer:
             logger.warning("未配置 API 密钥，审查功能将不可用")
 
         try:
-            import litellm
+            import litellm  # noqa: F401
         except ImportError:
             raise ImportError(
                 "LiteLLM 未安装，请运行: pip install litellm"

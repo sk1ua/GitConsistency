@@ -66,11 +66,12 @@ class ReviewContext:
         }
 
 
-class PromptTemplate:
+class PromptTemplate:  # noqa: E501
     """Prompt 模板基类."""
 
     # 系统 Prompt - 定义 AI 角色和能力
-    SYSTEM_PROMPT = """You are an expert code reviewer with deep expertise in software engineering, security, and code quality.
+    SYSTEM_PROMPT = (  # noqa: E501
+        """You are an expert code reviewer with deep expertise in software engineering, security, and code quality.
 
 Your responsibilities:
 1. Review code changes for bugs, security issues, and anti-patterns
@@ -83,6 +84,7 @@ Guidelines:
 - Explain the "why" behind your suggestions
 - Provide code examples when helpful
 - Consider context from the knowledge graph and scan results"""
+    )
 
     @classmethod
     def build(
@@ -268,7 +270,8 @@ Requirements:
 - Be specific with file paths and line numbers
 - Prioritize high-impact issues
 - Include code examples for complex suggestions
-- If no issues found, confirm with {"summary": "LGTM! No significant issues found.", "severity": "low", "comments": []}"""
+- If no issues found, confirm with {  # noqa: E501
+"summary": "LGTM! No significant issues found.", "severity": "low", "comments": []}"""
 
 
 class PromptCache:

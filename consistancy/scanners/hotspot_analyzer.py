@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
@@ -313,7 +314,7 @@ class HotspotAnalyzer(BaseScanner):
                 return frequency_map
 
             # 解析 git log 输出
-            current_commit = None
+            _commit = None  # commit hash not used in this context
             current_author = None
             current_date = None
 
@@ -326,7 +327,7 @@ class HotspotAnalyzer(BaseScanner):
                 if '|' in line:
                     parts = line.split('|')
                     if len(parts) >= 3:
-                        current_commit = parts[0]
+                        _ = parts[0]  # commit hash not used
                         current_author = parts[1]
                         current_date = datetime.fromisoformat(parts[2].replace(' ', 'T'))
                     continue
@@ -539,7 +540,3 @@ class HotspotAnalyzer(BaseScanner):
                     "risk": finding.metadata.get("risk_level", "unknown"),
                 })
         return data
-
-
-# 导入 asyncio 用于 subprocess
-import asyncio

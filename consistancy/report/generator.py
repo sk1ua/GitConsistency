@@ -392,11 +392,20 @@ class ReportGenerator:
         high = severity_counts.get(Severity.HIGH, 0)
 
         if critical > 0:
-            return f"🚨 Found **{total}** issues including **{critical}** critical vulnerabilities that require immediate attention."
+            return (
+                f"🚨 Found **{total}** issues including **{critical}** critical "
+                "vulnerabilities that require immediate attention."
+            )
         elif high > 0:
-            return f"⚠️ Found **{total}** issues including **{high}** high severity problems. Review recommended before merging."
+            return (
+                f"⚠️ Found **{total}** issues including **{high}** high severity "
+                "problems. Review recommended before merging."
+            )
         elif total > 0:
-            return f"✅ Found **{total}** minor issues. Consider addressing them for code quality improvement."
+            return (
+                f"✅ Found **{total}** minor issues. Consider addressing them for "
+                "code quality improvement."
+            )
         else:
             return "🎉 No issues found! Code looks great."
 
@@ -456,7 +465,10 @@ class ReportGenerator:
         # 生成评论
         comment_lines = []
         for comment in ai_review.comments[:20]:  # 限制数量
-            location = f"{comment.file}:{comment.line}" if comment.file and comment.line else (comment.file or "general")
+            if comment.file and comment.line:
+                location = f"{comment.file}:{comment.line}"
+            else:
+                location = comment.file or "general"
             suggestion = f"\n**💡 Suggestion**: {comment.suggestion}" if comment.suggestion else ""
 
             comment_text = self.md.AI_COMMENT.format(

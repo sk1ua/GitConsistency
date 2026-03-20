@@ -95,7 +95,7 @@ class GitHubIntegration:
             return
 
         try:
-            from github import Github
+            from github import Github  # noqa: F401
         except ImportError:
             raise ImportError(
                 "PyGithub 未安装，请运行: pip install pygithub"

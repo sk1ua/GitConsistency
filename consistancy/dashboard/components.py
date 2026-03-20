@@ -160,7 +160,9 @@ class Components:
         # 评论列表
         if comments:
             for i, comment in enumerate(comments[:10]):
-                with st.expander(f"💬 {comment.get('category', 'general').upper()} - {comment.get('message', '')[:50]}..."):
+                title = f"💬 {comment.get('category', 'general').upper()}"
+                msg = comment.get('message', '')[:50]
+                with st.expander(f"{title} - {msg}..."):
                     st.markdown(f"**文件**: `{comment.get('file', '-')}`")
                     st.markdown(f"**行号**: {comment.get('line', '-')}")
                     st.markdown(f"**消息**: {comment.get('message', '')}")
