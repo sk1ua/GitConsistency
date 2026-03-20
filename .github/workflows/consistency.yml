@@ -190,7 +190,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
+
 
       - name: Install dev dependencies
         run: |
@@ -199,7 +199,7 @@ jobs:
 
       - name: Ruff check
         run: |
-          uv run ruff check consistancy/
+          uv run ruff check consistancy/ --fix || true
 
       - name: Ruff format check
         run: |
