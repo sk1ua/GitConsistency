@@ -184,13 +184,13 @@ jobs:
 ## 📋 开发路线图
 
 - [x] **阶段0**: 项目初始化 - pyproject.toml, Dockerfile, CLI 框架
-- [ ] **阶段1**: GitNexus MCP 核心封装
-- [ ] **阶段2**: 扫描引擎（安全/漂移/热点）
-- [ ] **阶段3**: AI 审查核心
-- [ ] **阶段4**: 报告与 GitHub 集成
-- [ ] **阶段5**: Streamlit Dashboard
-- [ ] **阶段6**: CI/CD 自动化
-- [ ] **阶段7**: 测试、文档、打包
+- [x] **阶段1**: GitNexus MCP 核心封装 - 异步 MCP 客户端、缓存
+- [x] **阶段2**: 扫描引擎 - 安全扫描、漂移检测、热点分析
+- [x] **阶段3**: AI 审查核心 - LiteLLM、Prompt 模板、结构化输出
+- [x] **阶段4**: 报告与 GitHub 集成 - Markdown/HTML/JSON、PR 评论
+- [x] **阶段5**: Streamlit Dashboard - 交互式可视化、趋势分析
+- [x] **阶段6**: CI/CD 自动化 - GitHub Actions、完整 CLI、测试
+- [x] **阶段7**: 文档与打包 - README、CONTRIBUTING、Docker 支持
 
 ---
 
