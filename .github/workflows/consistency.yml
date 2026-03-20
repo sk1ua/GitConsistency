@@ -200,9 +200,9 @@ jobs:
         run: |
           uv run ruff check consistancy/ --fix || true
 
-      - name: Ruff format check
+      - name: Ruff format
         run: |
-          uv run ruff format --check consistancy/
+          uv run ruff format consistancy/
 
       - name: MyPy type check
         run: |

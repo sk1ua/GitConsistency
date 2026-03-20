@@ -402,10 +402,9 @@ class SecurityScanner(BaseScanner):
                 # 判断变量是否为用户输入（增强漏洞判断）
                 if context.symbols:
                     for symbol in context.symbols:
-                        if symbol.get("name") in (finding.code_snippet or ""):
-                            if symbol.get("is_user_input"):
-                                finding.severity = Severity.HIGH
-                                finding.metadata["is_user_input"] = True
+                        if symbol.get("name") in (finding.code_snippet or "") and symbol.get("is_user_input"):
+                            finding.severity = Severity.HIGH
+                            finding.metadata["is_user_input"] = True
 
                 enhanced.append(finding)
             except Exception as e:
