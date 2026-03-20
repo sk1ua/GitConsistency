@@ -219,7 +219,7 @@ def analyze_command(
             ai_review=result.get("ai_review"),
             project_name=path.name,
             format=report_format,
-            duration_ms=result["duration_ms"],
+            duration=result["duration_ms"] / 1000,  # 转换为秒
         )
 
         # 输出或保存
