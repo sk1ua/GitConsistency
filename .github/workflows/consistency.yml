@@ -99,7 +99,7 @@ jobs:
       - name: Install ConsistenCy
         run: |
           uv venv
-          uv pip install -e "."
+          uv pip install -e "." --python .venv/bin/python
 
       # -----------------------------------------------------------------------
       # 运行 ConsistenCy 分析
@@ -116,15 +116,13 @@ jobs:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
-          source .venv/bin/activate
-          
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            consistancy ci \
+            uv run consistancy ci \
               --event pull_request \
               --pr ${{ github.event.pull_request.number }} \
               ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
           else
-            consistancy analyze ${{ github.event.inputs.project_path || '.' }} \
+            uv run consistancy analyze ${{ github.event.inputs.project_path || '.' }} \
               --format markdown \
               --output report.md
           fi
@@ -178,22 +176,19 @@ jobs:
       - name: Install dev dependencies
         run: |
           uv venv
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev]" --python .venv/bin/python
 
       - name: Ruff check
         run: |
-          source .venv/bin/activate
-          ruff check consistancy/
+          uv run ruff check consistancy/
 
       - name: Ruff format check
         run: |
-          source .venv/bin/activate
-          ruff format --check consistancy/
+          uv run ruff format --check consistancy/
 
       - name: MyPy type check
         run: |
-          source .venv/bin/activate
-          mypy consistancy/
+          uv run mypy consistancy/
 
   # ===========================================================================
   # 测试
@@ -222,12 +217,11 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev]" --python .venv/bin/python
 
       - name: Run tests
         run: |
-          source .venv/bin/activate
-          pytest tests/ -v --cov=consistancy --cov-report=xml --cov-report=term
+          uv run pytest tests/ -v --cov=consistancy --cov-report=xml --cov-report=term
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
@@ -259,9 +253,8 @@ jobs:
       - name: Build package
         run: |
           uv venv
-          uv pip install build
-          source .venv/bin/activate
-          python -m build
+          uv pip install build --python .venv/bin/python
+          uv run python -m build
 
       - name: Upload package
         uses: actions/upload-artifact@v4
