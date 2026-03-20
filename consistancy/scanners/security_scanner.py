@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import subprocess
@@ -113,8 +114,6 @@ class SecurityScanner(BaseScanner):
         Returns:
             扫描结果
         """
-        import asyncio
-
         logger.info(f"开始安全扫描: {path}")
         
         findings: list[Finding] = []

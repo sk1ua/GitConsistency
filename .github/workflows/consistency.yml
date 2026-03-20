@@ -199,7 +199,7 @@ jobs:
       - name: Ruff check
         run: |
           # Only check critical errors (E, F, W), ignore style/doc issues
-          uv run ruff check consistancy/ --select E,W,F --fix || true
+          uv run ruff check consistancy/ --select E,W,F
 
       - name: Ruff format
         run: |
@@ -207,7 +207,7 @@ jobs:
 
       - name: MyPy type check
         run: |
-          uv run mypy consistancy/ || true
+          uv run mypy consistancy/
 
   # ===========================================================================
   # 测试

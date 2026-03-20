@@ -299,13 +299,6 @@ class Settings(BaseSettings):
         """解析路径字段."""
         return Path(v) if isinstance(v, str) else v
 
-    @field_validator("cache_dir", "gitnexus_cache_dir", "dashboard_data_dir", mode="after")
-    @classmethod
-    def ensure_path_exists(cls, v: Path) -> Path:
-        """确保路径目录存在."""
-        v.mkdir(parents=True, exist_ok=True)
-        return v
-
     # =============================================================================
     # 属性方法
     # =============================================================================

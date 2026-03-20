@@ -62,5 +62,5 @@ class TestCLI:
         """测试 analyze 命令执行（框架检查）."""
         result = runner.invoke(app, ["analyze", "."])
         assert result.exit_code == 0
-        # 应该显示阶段提示
-        assert "阶段0" in result.output or "阶段" in result.output
+        # 检查输出包含预期的分析配置面板内容
+        assert "分析配置" in result.output or "分析目标" in result.output or "扫描完成" in result.output
