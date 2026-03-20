@@ -171,47 +171,47 @@ class Components:
             st.success("AI 未发现显著问题")
 
     @staticmethod
-def render_hotspot_scatter(hotspots: list[dict[str, Any]]) -> None:
-    """渲染热点散点图."""
-    import plotly.express as px
+    def render_hotspot_scatter(hotspots: list[dict[str, Any]]) -> None:
+        """渲染热点散点图."""
+        import plotly.express as px
 
-    if not hotspots:
-        st.info("暂无热点数据")
-        return
+        if not hotspots:
+            st.info("暂无热点数据")
+            return
 
-    # 准备数据
-    data = []
-    for h in hotspots:
-        data.append({
-            "文件": h.get("file", "-"),
-            "复杂度": h.get("complexity", 0),
-            "变更频率": h.get("frequency", 0),
-            "热点分数": h.get("score", 0),
-            "风险等级": h.get("risk", "unknown"),
-        })
+        # 准备数据
+        data = []
+        for h in hotspots:
+            data.append({
+                "文件": h.get("file", "-"),
+                "复杂度": h.get("complexity", 0),
+                "变更频率": h.get("frequency", 0),
+                "热点分数": h.get("score", 0),
+                "风险等级": h.get("risk", "unknown"),
+            })
 
-    fig = px.scatter(
-        data,
-        x="复杂度",
-        y="变更频率",
-        size="热点分数",
-        color="风险等级",
-        hover_data=["文件"],
-        title="技术债务热点图 (复杂度 × 变更频率)",
-        color_discrete_map={
-            "critical": "#dc3545",
-            "high": "#fd7e14",
-            "medium": "#ffc107",
-            "low": "#28a745",
-        },
-    )
+        fig = px.scatter(
+            data,
+            x="复杂度",
+            y="变更频率",
+            size="热点分数",
+            color="风险等级",
+            hover_data=["文件"],
+            title="技术债务热点图 (复杂度 × 变更频率)",
+            color_discrete_map={
+                "critical": "#dc3545",
+                "high": "#fd7e14",
+                "medium": "#ffc107",
+                "low": "#28a745",
+            },
+        )
 
-    fig.update_layout(
-        xaxis_title="圈复杂度",
-        yaxis_title="90天内变更次数",
-    )
+        fig.update_layout(
+            xaxis_title="圈复杂度",
+            yaxis_title="90天内变更次数",
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
     @staticmethod
     def render_drift_timeline(drifts: list[dict[str, Any]]) -> None:
