@@ -258,7 +258,10 @@ class SecurityScanner(BaseScanner):
                 line=match.get("start", {}).get("line", 0),
                 column=match.get("start", {}).get("col", 0),
                 code_snippet=extra.get("lines", "").strip(),
-                confidence=extra.get("metadata", {}).get("confidence", "MEDIUM").lower() == "high" and 0.9 or 0.7,
+                confidence=(
+                    0.9 if extra.get("metadata", {}).get("confidence", "MEDIUM").lower() == "high"
+                    else 0.7
+                ),
                 metadata={
                     "source": "semgrep",
                     "cwe": metadata.get("cwe", []),
@@ -401,7 +404,9 @@ class SecurityScanner(BaseScanner):
                 # 判断变量是否为用户输入（增强漏洞判断）
                 if context.symbols:
                     for symbol in context.symbols:
-                        if symbol.get("name") in (finding.code_snippet or "") and symbol.get("is_user_input"):
+                        name = symbol.get("name")
+                        snippet = finding.code_snippet or ""
+                        if name in snippet and symbol.get("is_user_input"):
                             finding.severity = Severity.HIGH
                             finding.metadata["is_user_input"] = True
 
