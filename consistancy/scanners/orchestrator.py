@@ -176,12 +176,12 @@ class ScannerOrchestrator:
             tasks = [run_single(name, self._scanners[name]) for name in scanner_names]
             scan_results = await asyncio.gather(*tasks)
 
-            for name, result in scan_results:
-                if isinstance(result, Exception):
-                    logger.error(f"扫描器 {name} 失败: {result}")
-                    errors.append(f"{name}: {result}")
+            for name, scan_result in scan_results:
+                if isinstance(scan_result, Exception):
+                    logger.error(f"扫描器 {name} 失败: {scan_result}")
+                    errors.append(f"{name}: {scan_result}")
                 else:
-                    results[name] = result
+                    results[name] = scan_result
 
         duration_ms = (time.perf_counter() - start_time) * 1000
 
