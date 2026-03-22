@@ -218,7 +218,15 @@ class SecurityScanner(BaseScanner):
                 if finding:
                     findings.append(finding)
 
-            scanned_files = result.get("paths", {}).get("scanned", 0)
+            # 安全地获取扫描文件数，确保是整数
+            paths_data = result.get("paths", {})
+            if isinstance(paths_data, dict):
+                scanned_raw = paths_data.get("scanned", 0)
+                scanned_files = int(scanned_raw) if not isinstance(scanned_raw, list) else len(scanned_raw)
+            elif isinstance(paths_data, list):
+                scanned_files = len(paths_data)
+            else:
+                scanned_files = 0
 
         except FileNotFoundError:
             errors.append("Semgrep 未安装，请运行: pip install semgrep")
@@ -334,7 +342,10 @@ class SecurityScanner(BaseScanner):
                     findings.append(finding)
 
             metrics = result.get("metrics", {})
-            scanned_files = len(metrics) - 1 if metrics else 0  # 减去 "_totals"
+            if isinstance(metrics, dict):
+                scanned_files = len(metrics) - 1 if metrics else 0  # 减去 "_totals"
+            else:
+                scanned_files = 0
 
         except FileNotFoundError:
             errors.append("Bandit 未安装，请运行: pip install bandit[toml]")
