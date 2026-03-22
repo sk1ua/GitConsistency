@@ -166,20 +166,22 @@ class ScannerOrchestrator:
                 errors.append(f"security: {e}")
         else:
             # 并行运行所有扫描器
-            tasks = []
-            for name in scanner_names:
-                scanner = self._scanners[name]
-                tasks.append(self._run_scanner(name, scanner, path))
+            async def run_single(name: str, scanner: Any) -> tuple[str, ScanResult | Exception]:
+                try:
+                    result = await scanner.scan(path)
+                    return name, result
+                except Exception as e:
+                    return name, e
 
-            if tasks:
-                scan_results = await asyncio.gather(*tasks, return_exceptions=True)
+            tasks = [run_single(name, self._scanners[name]) for name in scanner_names]
+            scan_results = await asyncio.gather(*tasks)
 
-                for name, result in zip(scanner_names, scan_results):
-                    if isinstance(result, Exception):
-                        logger.error(f"扫描器 {name} 失败: {result}")
-                        errors.append(f"{name}: {result}")
-                    elif isinstance(result, ScanResult):
-                        results[name] = result
+            for name, result in scan_results:
+                if isinstance(result, Exception):
+                    logger.error(f"扫描器 {name} 失败: {result}")
+                    errors.append(f"{name}: {result}")
+                else:
+                    results[name] = result
 
         duration_ms = (time.perf_counter() - start_time) * 1000
 
@@ -189,27 +191,6 @@ class ScannerOrchestrator:
             duration_ms=duration_ms,
             errors=errors,
         )
-
-    async def _run_scanner(
-        self,
-        name: str,
-        scanner: Any,
-        path: Path,
-    ) -> ScanResult | Exception:
-        """运行单个扫描器.
-
-        Args:
-            name: 扫描器名称
-            scanner: 扫描器实例
-            path: 扫描路径
-
-        Returns:
-            扫描结果或异常
-        """
-        try:
-            return await scanner.scan(path)
-        except Exception as e:
-            return e
 
     def _get_security_scanner(self) -> SecurityScanner:
         """获取或创建安全扫描器."""

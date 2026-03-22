@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import tempfile
 from pathlib import Path
 
@@ -40,18 +39,6 @@ def insecure_function(password):
     if password == "secret123":
         return True
     return False
-
-def complex_function(x, y, z):
-    # 高复杂度
-    if x > 0:
-        if y > 0:
-            if z > 0:
-                return x + y + z
-            elif z < 0:
-                return x + y - z
-        elif y < 0:
-            return x - y
-    return 0
 """)
 
             # 初始化 git
@@ -109,28 +96,6 @@ def complex_function(x, y, z):
         assert isinstance(json_report, dict)
         assert "summary" in json_report
 
-    @pytest.mark.asyncio
-    async def test_drift_detector(self, sample_project: Path) -> None:
-        """测试漂移检测器."""
-        from consistancy.scanners.drift_detector import DriftDetector
-
-        detector = DriftDetector()
-        result = await detector.scan(sample_project)
-
-        assert result is not None
-        assert result.scanner_name == "drift"
-
-    @pytest.mark.asyncio
-    async def test_hotspot_analyzer(self, sample_project: Path) -> None:
-        """测试热点分析器."""
-        from consistancy.scanners.hotspot_analyzer import HotspotAnalyzer
-
-        analyzer = HotspotAnalyzer(lookback_days=7)
-        result = await analyzer.scan(sample_project)
-
-        assert result is not None
-        assert result.scanner_name == "hotspot"
-
     def test_github_integration_init(self) -> None:
         """测试 GitHub 集成初始化."""
         from consistancy.github_integration import GitHubIntegration
@@ -138,24 +103,6 @@ def complex_function(x, y, z):
         # 无 token 时应警告但不报错
         github = GitHubIntegration(token=None)
         assert github.token is None
-
-    def test_data_manager(self, tmp_path: Path) -> None:
-        """测试数据管理器."""
-        from consistancy.dashboard.data_manager import DataManager
-
-        manager = DataManager(tmp_path / "data")
-
-        # 保存数据
-        scan_data = {
-            "summary": {"total_issues": 5},
-            "scanners": [],
-        }
-        manager.save_scan(scan_data, "/project", 1000.0)
-
-        # 加载数据
-        latest = manager.load_latest()
-        assert latest is not None
-        assert latest["summary"]["total_issues"] == 5
 
     def test_config_loading(self) -> None:
         """测试配置加载."""

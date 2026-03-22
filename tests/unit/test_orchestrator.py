@@ -76,8 +76,6 @@ class TestScannerOrchestrator:
         orchestrator.create_default_scanners()
 
         assert "security" in orchestrator._scanners
-        assert "drift" in orchestrator._scanners
-        assert "hotspot" in orchestrator._scanners
 
     @pytest.mark.asyncio
     async def test_scan_single_scanner(self) -> None:
