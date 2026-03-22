@@ -159,16 +159,36 @@ class AIReviewer:
 
             return result
 
+        except TimeoutError as e:
+            self._stats["errors"] += 1
+            logger.error(f"LLM 调用超时: {e}")
+            return ReviewResult(
+                summary="审查超时，请稍后重试",
+                severity=Severity.LOW,
+                comments=[],
+                action_items=["增加超时时间或稍后重试"],
+                metadata={"error": "timeout", "detail": str(e)},
+            )
+        except ConnectionError as e:
+            self._stats["errors"] += 1
+            logger.error(f"网络连接错误: {e}")
+            return ReviewResult(
+                summary="网络连接失败，请检查网络",
+                severity=Severity.LOW,
+                comments=[],
+                action_items=["检查网络连接和 API 配置"],
+                metadata={"error": "connection", "detail": str(e)},
+            )
         except Exception as e:
             self._stats["errors"] += 1
-            logger.error(f"审查失败: {e}")
+            logger.exception(f"审查失败（未预期错误）: {e}")
             # 返回错误结果
             return ReviewResult(
                 summary=f"审查失败: {e}",
                 severity=Severity.LOW,
                 comments=[],
-                action_items=["请检查 API 配置和网络连接"],
-                metadata={"error": str(e)},
+                action_items=["请检查 API 配置和网络连接，如问题持续请联系支持"],
+                metadata={"error": str(e), "error_type": type(e).__name__},
             )
 
     async def review_batch(

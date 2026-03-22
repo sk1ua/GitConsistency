@@ -193,7 +193,12 @@ class SecurityScanner(BaseScanner):
             for pattern in self.semgrep_config.exclude:
                 cmd.extend(["--exclude", pattern])
 
-        cmd.append(str(path))
+        # 验证路径合法性，防止路径遍历
+        resolved_path = path.resolve()
+        if not resolved_path.exists():
+            errors.append(f"扫描路径不存在: {path}")
+            return findings, 0, errors
+        cmd.append(str(resolved_path))
 
         logger.debug(f"Semgrep 命令: {' '.join(cmd)}")
 
@@ -314,8 +319,14 @@ class SecurityScanner(BaseScanner):
             cmd.append("-x")
             cmd.append(",".join(self.bandit_config.exclude_dirs))
 
+        # 验证路径合法性，防止路径遍历
+        resolved_path = path.resolve()
+        if not resolved_path.exists():
+            errors.append(f"扫描路径不存在: {path}")
+            return findings, 0, errors
+
         cmd.append("-r")
-        cmd.append(str(path))
+        cmd.append(str(resolved_path))
 
         logger.debug(f"Bandit 命令: {' '.join(cmd)}")
 

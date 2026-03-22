@@ -469,6 +469,11 @@ def dashboard_command(
     settings = get_settings()
     actual_port = port or settings.streamlit_port
 
+    # 验证端口范围
+    if not (1 <= actual_port <= 65535):
+        console.print(f"[red]✗[/red] 端口必须在 1-65535 之间: {actual_port}")
+        raise typer.Exit(1)
+
     console.print(Panel.fit(
         f"[bold]端口:[/bold] {actual_port}\n"
         f"[bold]自动打开浏览器:[/bold] {'否' if no_browser else '是'}\n"

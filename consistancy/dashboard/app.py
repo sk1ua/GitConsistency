@@ -66,8 +66,14 @@ async def run_scan(
             reviewer = AIReviewer(model=model_str)
 
             # 构建上下文
+            # FIXME: 当前 diff 为空，需要实现 Git diff 获取
+            # 实现方案: 使用 GitPython 获取 HEAD 到工作区的 diff
+            # 代码示例:
+            #   import git
+            #   repo = git.Repo(project_path)
+            #   diff = repo.git.diff("HEAD")
             context = ReviewContext(
-                diff="",  # TODO: 获取实际 diff
+                diff="",
                 files_changed=[str(f) for f in report.results.keys()],
             )
 

@@ -501,8 +501,16 @@ class GitNexusClient:
             self.cache.clear()
             return int(stats_before["memory_entries"]) + int(stats_before["file_entries"])
 
-        # TODO: 实现模式匹配删除
-        return 0
+        # FIXME: 需要实现模式匹配删除
+        # 实现方案: 遍历 memory_cache 和 file_cache，匹配 key 后删除
+        # 代码示例:
+        #   import fnmatch
+        #   keys_to_delete = [k for k in self.cache.memory_cache if fnmatch.fnmatch(k, pattern)]
+        #   for key in keys_to_delete:
+        #       self.cache.delete(key)
+        #   return len(keys_to_delete)
+        logger.warning(f"模式匹配删除未实现，尝试完全清除缓存")
+        return self.invalidate_cache(None)
 
     @asynccontextmanager
     async def batch(self) -> AsyncIterator["GitNexusClient"]:
