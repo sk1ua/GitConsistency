@@ -24,7 +24,7 @@
 
 ```bash
 # 使用 uv（推荐）
-uv pip install git+https://github.com/consistancy-team/consistancy.git
+uv pip install git+https://github.com/sk1ua/GitConsistency.git
 
 # 或使用 pip
 pip install consistancy
@@ -116,7 +116,7 @@ consistancy/
 
 ```bash
 # 克隆仓库
-git clone https://github.com/consistancy-team/consistancy.git
+git clone https://github.com/sk1ua/GitConsistency.git
 cd consistancy
 
 # 安装开发依赖

@@ -1,12 +1,13 @@
-"""ConsistenCy 2.0 - 现代代码健康智能守护者.
+"""ConsistenCy 2.0 - 代码安全扫描与 AI 审查工具.
 
-一个为 vibe coding / 高频 commit 项目提供的自动代码一致性漂移检测、
-安全扫描、技术债务分析 + AI 审查 + Streamlit Dashboard + GitHub PR 自动评论工具。
+一个为 vibe coding / 高频 commit 项目提供的代码安全扫描、
+AI 审查和 GitHub PR 自动评论工具。
 
 Examples:
-    >>> from consistancy import ConsistencyAnalyzer
-    >>> analyzer = ConsistencyAnalyzer()
-    >>> results = analyzer.analyze("./my-project")
+    >>> from consistancy import get_settings
+    >>> settings = get_settings()
+    >>> print(settings.project_name)
+    'ConsistenCy'
 
 Attributes:
     __version__: 当前版本号

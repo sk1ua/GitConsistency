@@ -218,9 +218,9 @@ jobs:
           # Only check critical errors (E, F, W), ignore style/doc issues
           uv run ruff check consistancy/ --select E,W,F
 
-      - name: Ruff format
+      - name: Ruff format check
         run: |
-          uv run ruff format consistancy/
+          uv run ruff format --check consistancy/
 
       - name: MyPy type check
         run: |
@@ -264,7 +264,7 @@ jobs:
         if: matrix.python-version == '3.12'
         with:
           files: ./coverage.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   # ===========================================================================
   # 构建和发布（仅 main 分支）

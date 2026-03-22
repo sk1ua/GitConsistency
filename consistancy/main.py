@@ -370,8 +370,11 @@ def ci_command(
             console.print(Panel(comment, title="评论预览"))
         else:
             github = GitHubIntegration()
-            asyncio.run(github.post_comment(repo, actual_pr_number, comment))
-            console.print("\n[green]✓[/green] 评论已发布")
+            post_result = asyncio.run(github.post_comment(repo, actual_pr_number, comment))
+            if "error" in post_result:
+                console.print(f"\n[red]✗ 评论发布失败: {post_result['error']}[/red]")
+                raise typer.Exit(1)
+            console.print(f"\n[green]✓[/green] 评论已发布: {post_result.get('url', '')}")
 
         _print_summary(result)
 

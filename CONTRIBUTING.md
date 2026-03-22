@@ -174,8 +174,8 @@ git push origin v2.x.x
 ## 获取帮助
 
 - 📖 阅读 [文档](https://docs.consistancy.dev)
-- 💬 加入 [Discussions](https://github.com/consistancy-team/consistancy/discussions)
-- 🐛 提交 [Issue](https://github.com/consistancy-team/consistancy/issues)
+- 💬 加入 [Discussions](https://github.com/sk1ua/GitConsistency/discussions)
+- 🐛 提交 [Issue](https://github.com/sk1ua/GitConsistency/issues)
 
 ## 行为准则
 

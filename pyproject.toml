@@ -27,7 +27,6 @@ dependencies = [
     
     # 异步 & 缓存
     "aiohttp>=3.9.0",
-    "asyncio>=3.4.3",
     "cachetools>=5.3.0",
     
     # LLM & AI
@@ -78,10 +77,10 @@ consistancy = "consistancy.main:app"
 ccy = "consistancy.main:app"
 
 [project.urls]
-Homepage = "https://github.com/consistancy-team/consistancy"
+Homepage = "https://github.com/sk1ua/GitConsistency"
 Documentation = "https://docs.consistancy.dev"
-Repository = "https://github.com/consistancy-team/consistancy"
-Issues = "https://github.com/consistancy-team/consistancy/issues"
+Repository = "https://github.com/sk1ua/GitConsistency"
+Issues = "https://github.com/sk1ua/GitConsistency/issues"
 
 [build-system]
 requires = ["hatchling"]

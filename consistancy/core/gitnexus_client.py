@@ -493,7 +493,7 @@ class GitNexusClient:
         """使缓存失效.
 
         Args:
-            pattern: 匹配模式（可选，None 表示全部）
+            pattern: 匹配模式（可选，None 表示全部），支持 fnmatch 通配符
 
         Returns:
             清除的条目数
@@ -503,16 +503,36 @@ class GitNexusClient:
             self.cache.clear()
             return int(stats_before["memory_entries"]) + int(stats_before["file_entries"])
 
-        # FIXME: 需要实现模式匹配删除
-        # 实现方案: 遍历 memory_cache 和 file_cache，匹配 key 后删除
-        # 代码示例:
-        #   import fnmatch
-        #   keys_to_delete = [k for k in self.cache.memory_cache if fnmatch.fnmatch(k, pattern)]
-        #   for key in keys_to_delete:
-        #       self.cache.delete(key)
-        #   return len(keys_to_delete)
-        logger.warning("模式匹配删除未实现，尝试完全清除缓存")
-        return self.invalidate_cache(None)
+        import fnmatch
+
+        deleted_count = 0
+
+        # 清理内存缓存
+        memory_keys = list(self.cache.memory_cache.keys())
+        for key in memory_keys:
+            if fnmatch.fnmatch(key, pattern):
+                self.cache.delete(key)
+                deleted_count += 1
+
+        # 清理文件缓存（通过文件名哈希匹配）
+        for cache_file in self.cache.file_cache_dir.glob("*.cache"):
+            # 文件名是哈希，无法直接匹配，但我们可以尝试读取并检查原始 key
+            try:
+                import pickle
+
+                with open(cache_file, "rb") as f:
+                    entry = pickle.load(f)
+                    if hasattr(entry, "key") and fnmatch.fnmatch(entry.key, pattern):
+                        cache_file.unlink()
+                        deleted_count += 1
+            except Exception:
+                # 如果无法读取，跳过
+                pass
+
+        if deleted_count == 0:
+            logger.warning(f"没有匹配模式 '{pattern}' 的缓存条目")
+
+        return deleted_count
 
     @asynccontextmanager
     async def batch(self) -> AsyncIterator["GitNexusClient"]:
