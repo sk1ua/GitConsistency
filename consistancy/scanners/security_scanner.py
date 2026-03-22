@@ -173,17 +173,12 @@ class SecurityScanner(BaseScanner):
 
         return unique
 
-    async def _run_semgrep(
-        self,
-        path: Path,
-    ) -> tuple[list[Finding], int, list[str]]:
-        """运行 Semgrep 扫描.
-
-        Returns:
-            (findings, scanned_files, errors)
-        """
-        findings: list[Finding] = []
-        errors: list[str] = []
+    def _build_semgrep_cmd(self, path: Path) -> list[str] | None:
+        """构建 Semgrep 命令."""
+        # 验证路径合法性，防止路径遍历
+        resolved_path = path.resolve()
+        if not resolved_path.exists():
+            return None
 
         cmd = [
             "semgrep",
@@ -202,12 +197,46 @@ class SecurityScanner(BaseScanner):
             for pattern in self.semgrep_config.exclude:
                 cmd.extend(["--exclude", pattern])
 
-        # 验证路径合法性，防止路径遍历
-        resolved_path = path.resolve()
-        if not resolved_path.exists():
+        cmd.append(str(resolved_path))
+        return cmd
+
+    def _parse_semgrep_results(
+        self, result: dict[str, Any]
+    ) -> tuple[list[Finding], int]:
+        """解析 Semgrep JSON 结果."""
+        findings: list[Finding] = []
+
+        # 解析结果
+        for match in result.get("results", []):
+            finding = self._parse_semgrep_match(match)
+            if finding:
+                findings.append(finding)
+
+        # 安全地获取扫描文件数
+        paths_data = result.get("paths", {})
+        if isinstance(paths_data, dict):
+            scanned_raw = paths_data.get("scanned", 0)
+            scanned_files = int(scanned_raw) if not isinstance(scanned_raw, list) else len(scanned_raw)
+        elif isinstance(paths_data, list):
+            scanned_files = len(paths_data)
+        else:
+            scanned_files = 0
+
+        return findings, scanned_files
+
+    async def _run_semgrep(
+        self,
+        path: Path,
+    ) -> tuple[list[Finding], int, list[str]]:
+        """运行 Semgrep 扫描."""
+        findings: list[Finding] = []
+        errors: list[str] = []
+        scanned_files = 0
+
+        cmd = self._build_semgrep_cmd(path)
+        if cmd is None:
             errors.append(f"扫描路径不存在: {path}")
             return findings, 0, errors
-        cmd.append(str(resolved_path))
 
         logger.debug(f"Semgrep 命令: {' '.join(cmd)}")
 
@@ -225,32 +254,14 @@ class SecurityScanner(BaseScanner):
                     logger.warning(f"Semgrep stderr: {err_msg}")
 
             result = json.loads(stdout.decode())
-
-            # 解析结果
-            for match in result.get("results", []):
-                finding = self._parse_semgrep_match(match)
-                if finding:
-                    findings.append(finding)
-
-            # 安全地获取扫描文件数，确保是整数
-            paths_data = result.get("paths", {})
-            if isinstance(paths_data, dict):
-                scanned_raw = paths_data.get("scanned", 0)
-                scanned_files = int(scanned_raw) if not isinstance(scanned_raw, list) else len(scanned_raw)
-            elif isinstance(paths_data, list):
-                scanned_files = len(paths_data)
-            else:
-                scanned_files = 0
+            findings, scanned_files = self._parse_semgrep_results(result)
 
         except FileNotFoundError:
             errors.append("Semgrep 未安装，请运行: pip install semgrep")
-            scanned_files = 0
         except json.JSONDecodeError as e:
             errors.append(f"Semgrep 输出解析失败: {e}")
-            scanned_files = 0
         except Exception as e:
             errors.append(f"Semgrep 执行错误: {e}")
-            scanned_files = 0
 
         return findings, scanned_files, errors
 
@@ -294,48 +305,62 @@ class SecurityScanner(BaseScanner):
             logger.warning(f"解析 Semgrep 结果失败: {e}")
             return None
 
-    async def _run_bandit(
-        self,
-        path: Path,
-    ) -> tuple[list[Finding], int, list[str]]:
-        """运行 Bandit 扫描.
-
-        Returns:
-            (findings, scanned_files, errors)
-        """
-        findings: list[Finding] = []
-        errors: list[str] = []
-        scanned_files = 0
+    def _build_bandit_cmd(self, path: Path) -> list[str] | None:
+        """构建 Bandit 命令."""
+        resolved_path = path.resolve()
+        if not resolved_path.exists():
+            return None
 
         cmd = [
             "bandit",
             "-f", "json",
-            "-ll",  # 输出级别
-            "-ii",  # 显示更多信息
+            "-ll",
+            "-ii",
         ]
 
-        # 严重程度过滤
         if self.bandit_config.severity == "HIGH":
             cmd.append("-lll")
 
-        # 跳过测试文件
         if self.bandit_config.skip_tests:
-            cmd.append("-s")
-            cmd.append("B101")  # skip assert_used in tests
+            cmd.extend(["-s", "B101"])
 
-        # 排除目录
         if self.bandit_config.exclude_dirs:
-            cmd.append("-x")
-            cmd.append(",".join(self.bandit_config.exclude_dirs))
+            cmd.extend(["-x", ",".join(self.bandit_config.exclude_dirs)])
 
-        # 验证路径合法性，防止路径遍历
-        resolved_path = path.resolve()
-        if not resolved_path.exists():
+        cmd.extend(["-r", str(resolved_path)])
+        return cmd
+
+    def _parse_bandit_results(
+        self, result: dict[str, Any]
+    ) -> tuple[list[Finding], int]:
+        """解析 Bandit JSON 结果."""
+        findings = []
+        for issue in result.get("results", []):
+            finding = self._parse_bandit_issue(issue)
+            if finding:
+                findings.append(finding)
+
+        metrics = result.get("metrics", {})
+        if isinstance(metrics, dict):
+            scanned_files = len(metrics) - 1 if metrics else 0
+        else:
+            scanned_files = 0
+
+        return findings, scanned_files
+
+    async def _run_bandit(
+        self,
+        path: Path,
+    ) -> tuple[list[Finding], int, list[str]]:
+        """运行 Bandit 扫描."""
+        findings: list[Finding] = []
+        errors: list[str] = []
+        scanned_files = 0
+
+        cmd = self._build_bandit_cmd(path)
+        if cmd is None:
             errors.append(f"扫描路径不存在: {path}")
             return findings, 0, errors
-
-        cmd.append("-r")
-        cmd.append(str(resolved_path))
 
         logger.debug(f"Bandit 命令: {' '.join(cmd)}")
 
@@ -347,25 +372,13 @@ class SecurityScanner(BaseScanner):
             )
             stdout, stderr = await proc.communicate()
 
-            # Bandit 返回 1 表示发现了问题，这是正常的
             if proc.returncode not in (0, 1):
                 err_msg = stderr.decode().strip()
                 if err_msg:
                     errors.append(f"Bandit 错误 (exit {proc.returncode}): {err_msg}")
 
             result = json.loads(stdout.decode())
-
-            # 解析结果
-            for issue in result.get("results", []):
-                finding = self._parse_bandit_issue(issue)
-                if finding:
-                    findings.append(finding)
-
-            metrics = result.get("metrics", {})
-            if isinstance(metrics, dict):
-                scanned_files = len(metrics) - 1 if metrics else 0  # 减去 "_totals"
-            else:
-                scanned_files = 0
+            findings, scanned_files = self._parse_bandit_results(result)
 
         except FileNotFoundError:
             errors.append("Bandit 未安装，请运行: pip install bandit[toml]")

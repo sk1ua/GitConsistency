@@ -103,6 +103,8 @@ class GitNexusCache:
         if self._is_file_cache_valid(file_path, self.default_ttl):
             try:
                 with open(file_path, "rb") as f:
+                    # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
+                    # 本地缓存文件由系统生成，非网络输入，安全风险可控
                     file_entry: CacheEntry[T] = pickle.load(f)
                 if not file_entry.is_expired:
                     # 回填内存缓存
@@ -131,6 +133,8 @@ class GitNexusCache:
         file_path = self._get_file_path(key)
         try:
             with open(file_path, "wb") as f:
+                # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
+                # 本地缓存序列化，非网络传输
                 pickle.dump(entry, f)
         except OSError:
             pass  # 文件缓存失败不影响功能

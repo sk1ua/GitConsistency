@@ -378,15 +378,14 @@ class DriftDetector(BaseScanner):
                         py_file, lines, patterns["naming_convention"],
                     ))
 
-                # 检测函数签名漂移（仅在项目主要使用 untyped 时）
-                # 如果项目主要使用类型注解（typed > 50%），这是好的实践，不标记为漂移
-                if "function_signature" in patterns:
-                    sig_pattern = patterns["function_signature"]
-                    # 仅当项目主要使用 untyped 时才检测 typed 的漂移
-                    if sig_pattern.examples and sig_pattern.examples[0] == "untyped":
-                        drifts.extend(self._check_signature_drift(
-                            py_file, lines, sig_pattern,
-                        ))
+                # 跳过函数签名漂移检测
+                # 原因: 现代 Python 项目鼓励使用类型注解，
+                # 检测 "typed vs untyped" 漂移会产生大量误报
+                # if "function_signature" in patterns:
+                #     sig_pattern = patterns["function_signature"]
+                #     drifts.extend(self._check_signature_drift(
+                #         py_file, lines, sig_pattern,
+                #     ))
 
                 # 检测异常处理漂移
                 if "error_handling" in patterns:
