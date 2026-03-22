@@ -330,3 +330,26 @@ yarn-error.log*
 # Documentation builds
 _build/
 build/doctrees
+
+# =============================================================================
+# Personal Development Tools (Never commit)
+# =============================================================================
+# Postman
+.postman/
+postman/
+
+# Personal IDE workspaces (keep only if shared settings needed)
+# .vscode/
+# .idea/
+
+# Local development scripts
+scripts/local/
+*.local.py
+*.local.sh
+
+# Personal status/notes files
+ci_status.md
+TODO.md
+NOTES.md
+PERSONAL.md
+DEV.md
