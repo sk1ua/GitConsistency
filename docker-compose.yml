@@ -1,5 +1,5 @@
 # ConsistenCy 2.0 - Docker Compose 配置
-# 支持：本地开发、CI/CD、Dashboard 独立运行
+# 支持：本地开发、CI/CD
 
 version: "3.8"
 
@@ -47,40 +47,6 @@ services:
     networks:
       - consistancy-net
 
-  # ==================== Streamlit Dashboard ====================
-  dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: dashboard
-    image: consistancy:dashboard
-    container_name: consistancy-dashboard
-    env_file:
-      - .env
-    ports:
-      - "8501:8501"
-    volumes:
-      # 分析目标仓库
-      - type: bind
-        source: ${TARGET_REPO:-.}
-        target: /repo
-        read_only: true
-      # 持久化数据
-      - consistancy-data:/app/data
-      - consistancy-cache:/app/.cache
-    environment:
-      - CONSISTANCY_REPO_PATH=/repo
-      - STREAMLIT_SERVER_PORT=8501
-      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
-    networks:
-      - consistancy-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
   # ==================== 测试运行器 ====================
   test:
     build:
@@ -127,8 +93,6 @@ services:
 # ==================== 卷定义 ====================
 volumes:
   consistancy-cache:
-    driver: local
-  consistancy-data:
     driver: local
 
 # ==================== 网络定义 ====================

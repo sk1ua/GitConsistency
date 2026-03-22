@@ -131,9 +131,6 @@ jobs:
           # GitNexus MCP（可选）
           GITNEXUS_MCP_URL: ${{ secrets.GITNEXUS_MCP_URL }}
           
-          # CI 优化：禁用 embedding 计算以加快扫描速度
-          DRIFT_ENABLE_EMBEDDING: "false"
-          
           # CI 环境变量（用于脚本中使用，避免直接插值）
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}

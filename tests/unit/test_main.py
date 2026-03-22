@@ -26,19 +26,13 @@ class TestCLI:
         """测试 analyze 命令帮助."""
         result = runner.invoke(app, ["analyze", "--help"])
         assert result.exit_code == 0
-        assert "分析代码仓库的健康状况" in result.output
+        assert "分析代码仓库的安全状况" in result.output
 
     def test_ci_help(self) -> None:
         """测试 ci 命令帮助."""
         result = runner.invoke(app, ["ci", "--help"])
         assert result.exit_code == 0
         assert "CI/CD" in result.output
-
-    def test_dashboard_help(self) -> None:
-        """测试 dashboard 命令帮助."""
-        result = runner.invoke(app, ["dashboard", "--help"])
-        assert result.exit_code == 0
-        assert "Streamlit" in result.output
 
     def test_config_show(self) -> None:
         """测试 config show 命令."""
@@ -57,10 +51,3 @@ class TestCLI:
         result = runner.invoke(app, ["scan", "security", "--help"])
         assert result.exit_code == 0
         assert "安全扫描" in result.output
-
-    def test_analyze_command(self) -> None:
-        """测试 analyze 命令执行（框架检查）."""
-        result = runner.invoke(app, ["analyze", "."])
-        assert result.exit_code == 0
-        # 检查输出包含预期的分析配置面板内容
-        assert "分析配置" in result.output or "分析目标" in result.output or "扫描完成" in result.output

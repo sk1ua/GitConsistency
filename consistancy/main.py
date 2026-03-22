@@ -307,6 +307,13 @@ def ci_command(
             help="干运行模式（不实际发布评论）",
         ),
     ] = False,
+    skip_ai: Annotated[
+        bool,
+        typer.Option(
+            "--skip-ai",
+            help="跳过 AI 审查",
+        ),
+    ] = False,
 ) -> None:
     """在 CI/CD 环境中运行（GitHub Actions 等）.
 
@@ -347,7 +354,7 @@ def ci_command(
         result = asyncio.run(_run_analysis(
             path=Path("."),
             skip_security=False,
-            skip_ai=False,
+            skip_ai=skip_ai,
             settings=get_settings(),
         ))
 

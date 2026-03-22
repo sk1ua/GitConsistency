@@ -1,4 +1,4 @@
-# ConsistenCy 2.0 - 现代代码健康智能守护者
+# ConsistenCy 2.0 - 代码安全扫描与 AI 审查
 # 多阶段构建，优化镜像大小和安全性
 
 # ==================== 构建阶段 ====================
@@ -85,22 +85,3 @@ COPY .pre-commit-config.yaml ./
 RUN git init && pre-commit install-hooks || true
 
 CMD ["bash"]
-
-# ==================== Streamlit Dashboard 阶段 ====================
-FROM production AS dashboard
-
-# 暴露 Streamlit 端口
-EXPOSE 8501
-
-# Streamlit 特定环境变量
-ENV STREAMLIT_SERVER_PORT=8501 \
-    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
-    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
-    STREAMLIT_SERVER_HEADLESS=true
-
-# 健康检查（Streamlit）
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
-
-ENTRYPOINT ["streamlit", "run"]
-CMD ["consistancy/dashboard/app.py"]
