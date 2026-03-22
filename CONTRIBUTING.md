@@ -36,7 +36,6 @@ consistancy/
 ├── scanners/       # 扫描引擎
 ├── reviewer/       # AI 审查
 ├── report/         # 报告生成
-├── dashboard/      # Streamlit 界面
 └── tests/          # 测试
     ├── unit/       # 单元测试
     ├── integration/# 集成测试
