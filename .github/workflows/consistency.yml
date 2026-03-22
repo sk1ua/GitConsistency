@@ -134,14 +134,17 @@ jobs:
           # CI 优化：禁用 embedding 计算以加快扫描速度
           DRIFT_ENABLE_EMBEDDING: "false"
           
-          # CI 环境变量
+          # CI 环境变量（用于脚本中使用，避免直接插值）
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+          PROJECT_PATH: ${{ github.event.inputs.project_path || '.' }}
+          # LITELLM_API_KEY 已由上面设置
         run: |
-          # 检查是否有 LLM API Key
-          if [ -n "${{ secrets.LITELLM_API_KEY }}" ]; then
+          # 使用环境变量避免注入风险
+          if [ -n "$LITELLM_API_KEY" ]; then
             echo "✅ LLM API Key 已配置，将启用 AI 审查"
             SKIP_AI=""
           else
@@ -149,14 +152,14 @@ jobs:
             SKIP_AI="--skip-ai"
           fi
           
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
             uv run consistancy ci \
               --event pull_request \
-              --pr ${{ github.event.pull_request.number }} \
+              --pr "$GITHUB_PR_NUMBER" \
               $SKIP_AI \
-              ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+              $DRY_RUN_FLAG
           else
-            uv run consistancy analyze ${{ github.event.inputs.project_path || '.' }} \
+            uv run consistancy analyze "$PROJECT_PATH" \
               $SKIP_AI \
               --format markdown \
               --output report.md

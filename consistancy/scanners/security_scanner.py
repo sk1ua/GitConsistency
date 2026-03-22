@@ -115,45 +115,21 @@ class SecurityScanner(BaseScanner):
         """
         logger.info(f"开始安全扫描: {path}")
 
-        findings: list[Finding] = []
-        errors: list[str] = []
-        scanned_files = 0
-
         # 并行运行两个扫描器
         semgrep_task = asyncio.create_task(
-            self._run_semgrep(path),
-            name="semgrep_scan",
+            self._run_semgrep(path), name="semgrep_scan",
         )
         bandit_task = asyncio.create_task(
-            self._run_bandit(path),
-            name="bandit_scan",
+            self._run_bandit(path), name="bandit_scan",
         )
 
-        # 等待结果
-        try:
-            semgrep_findings, semgrep_files, semgrep_errors = await semgrep_task
-            findings.extend(semgrep_findings)
-            scanned_files = max(scanned_files, semgrep_files)
-            errors.extend(semgrep_errors)
-        except Exception as e:
-            logger.error(f"Semgrep 扫描失败: {e}")
-            errors.append(f"Semgrep: {e}")
+        # 收集结果
+        findings, scanned_files, errors = await self._collect_scan_results(
+            semgrep_task, bandit_task
+        )
 
-        try:
-            bandit_findings, bandit_files, bandit_errors = await bandit_task
-            findings.extend(bandit_findings)
-            scanned_files = max(scanned_files, bandit_files)
-            errors.extend(bandit_errors)
-        except Exception as e:
-            logger.error(f"Bandit 扫描失败: {e}")
-            errors.append(f"Bandit: {e}")
-
-        # 去重（基于文件路径、行号、规则ID）
-        unique_findings = self._deduplicate_findings(findings)
-
-        # 如果使用 GitNexus，增强上下文
-        if self.use_gitnexus and self.gitnexus_client:
-            unique_findings = await self._enhance_with_context(unique_findings)
+        # 后处理
+        unique_findings = await self._post_process_findings(findings)
 
         logger.info(f"安全扫描完成: {len(unique_findings)} 个问题")
 
@@ -163,6 +139,39 @@ class SecurityScanner(BaseScanner):
             scanned_files=scanned_files,
             errors=errors,
         )
+
+    async def _collect_scan_results(
+        self,
+        semgrep_task: asyncio.Task[tuple[list[Finding], int, list[str]]],
+        bandit_task: asyncio.Task[tuple[list[Finding], int, list[str]]],
+    ) -> tuple[list[Finding], int, list[str]]:
+        """收集扫描结果."""
+        findings: list[Finding] = []
+        errors: list[str] = []
+        scanned_files = 0
+
+        for task, name in [(semgrep_task, "Semgrep"), (bandit_task, "Bandit")]:
+            try:
+                task_findings, task_files, task_errors = await task
+                findings.extend(task_findings)
+                scanned_files = max(scanned_files, task_files)
+                errors.extend(task_errors)
+            except Exception as e:
+                logger.error(f"{name} 扫描失败: {e}")
+                errors.append(f"{name}: {e}")
+
+        return findings, scanned_files, errors
+
+    async def _post_process_findings(self, findings: list[Finding]) -> list[Finding]:
+        """后处理发现的问题：去重和增强."""
+        # 去重
+        unique = self._deduplicate_findings(findings)
+
+        # 如果使用 GitNexus，增强上下文
+        if self.use_gitnexus and self.gitnexus_client:
+            unique = await self._enhance_with_context(unique)
+
+        return unique
 
     async def _run_semgrep(
         self,

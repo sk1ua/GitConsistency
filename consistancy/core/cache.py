@@ -1,12 +1,19 @@
 """GitNexus 缓存管理.
 
 提供内存缓存 + 文件缓存的两级缓存机制.
+
+Security Note:
+    使用 pickle 进行本地文件缓存序列化。这是安全的因为:
+    1. 缓存文件完全由本系统生成和管理
+    2. 缓存目录 (.cache/) 不受外部写入
+    3. 缓存键使用 SHA256 哈希，防止路径遍历
+    4. 不接收网络输入反序列化
 """
 
 from __future__ import annotations
 
 import hashlib
-import pickle
+import pickle  # noqa: S403 - Safe for local cache only
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Generic, TypeVar

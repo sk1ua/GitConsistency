@@ -358,9 +358,14 @@ class DriftDetector(BaseScanner):
         if not patterns:
             return drifts
 
-        # 遍历 Python 文件
+        # 遍历 Python 文件（跳过测试文件）
         for py_file in path.rglob("*.py"):
             if not py_file.is_file():
+                continue
+
+            # 跳过测试文件和 __init__.py
+            file_name = py_file.name
+            if file_name.startswith("test_") or file_name.endswith("_test.py") or file_name == "__init__.py":
                 continue
 
             try:
@@ -373,11 +378,15 @@ class DriftDetector(BaseScanner):
                         py_file, lines, patterns["naming_convention"],
                     ))
 
-                # 检测函数签名漂移
+                # 检测函数签名漂移（仅在项目主要使用 untyped 时）
+                # 如果项目主要使用类型注解（typed > 50%），这是好的实践，不标记为漂移
                 if "function_signature" in patterns:
-                    drifts.extend(self._check_signature_drift(
-                        py_file, lines, patterns["function_signature"],
-                    ))
+                    sig_pattern = patterns["function_signature"]
+                    # 仅当项目主要使用 untyped 时才检测 typed 的漂移
+                    if sig_pattern.examples and sig_pattern.examples[0] == "untyped":
+                        drifts.extend(self._check_signature_drift(
+                            py_file, lines, sig_pattern,
+                        ))
 
                 # 检测异常处理漂移
                 if "error_handling" in patterns:

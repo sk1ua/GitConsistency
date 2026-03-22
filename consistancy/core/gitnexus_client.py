@@ -302,6 +302,8 @@ class GitNexusClient:
             raise GitNexusConnectionError("进程未运行")
 
         request = json.dumps(msg.to_dict()) + "\n"
+        # nosemgrep: python.django.security.injection.request-data-write
+        # 这是向 MCP 子进程的 stdin 写入，不是文件操作。数据已通过 to_dict() 序列化。
         self._process.stdin.write(request.encode())
         await self._process.stdin.drain()
 
