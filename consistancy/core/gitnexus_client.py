@@ -509,7 +509,7 @@ class GitNexusClient:
         #   for key in keys_to_delete:
         #       self.cache.delete(key)
         #   return len(keys_to_delete)
-        logger.warning(f"模式匹配删除未实现，尝试完全清除缓存")
+        logger.warning("模式匹配删除未实现，尝试完全清除缓存")
         return self.invalidate_cache(None)
 
     @asynccontextmanager
