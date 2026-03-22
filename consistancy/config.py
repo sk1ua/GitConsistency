@@ -285,17 +285,17 @@ class Settings(BaseSettings):
     @classmethod
     def validate_model_name(cls, v: str) -> str:
         """验证并修复模型名称格式.
-        
+
         LiteLLM 要求格式为 "provider/model"，自动修复常见错误格式。
         """
         if not v:
             return v
         v = v.strip()
-        
+
         # 如果已经包含 /，认为是正确格式
         if "/" in v:
             return v
-        
+
         # 自动补全常见 provider
         provider_map = {
             "deepseek": "deepseek/deepseek-chat",
@@ -305,16 +305,16 @@ class Settings(BaseSettings):
             "claude-3": "anthropic/claude-3-sonnet-20240229",
             "claude-3-haiku": "anthropic/claude-3-haiku-20240307",
         }
-        
+
         # 检查是否需要补全
         for prefix, full_name in provider_map.items():
             if v.lower().startswith(prefix):
                 return full_name
-        
+
         # 默认添加 deepseek 前缀（如果看起来像 deepseek 模型）
         if "chat" in v.lower():
             return f"deepseek/{v}"
-        
+
         return v
 
     @field_validator("gitnexus_mcp_args", mode="before")
