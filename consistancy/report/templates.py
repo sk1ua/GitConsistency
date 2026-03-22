@@ -118,7 +118,7 @@ class MarkdownTemplates:
 
 ### Summary
 
-{summary}
+> {summary}
 
 **Overall Severity**: {severity}
 

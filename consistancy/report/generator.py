@@ -454,9 +454,12 @@ class ReportGenerator:
         include_details: bool,
     ) -> str:
         """生成 AI 审查部分."""
+        # 清理 summary，移除 JSON 标记和多余空白
+        summary = self._clean_text_for_markdown(ai_review.summary)
+
         if not include_details:
             return self.md.AI_REVIEW_SECTION.format(
-                summary=ai_review.summary,
+                summary=summary,
                 severity=ai_review.severity.value.upper(),
                 comments="",
                 action_items="",
@@ -475,7 +478,7 @@ class ReportGenerator:
                 category=comment.category.value.upper(),
                 severity=comment.severity.value.upper(),
                 location=location,
-                message=comment.message,
+                message=self._clean_text_for_markdown(comment.message),
                 suggestion=suggestion,
             )
             comment_lines.append(comment_text)
@@ -484,11 +487,50 @@ class ReportGenerator:
         action_lines = [f"- [ ] {item}" for item in ai_review.action_items[:10]]
 
         return self.md.AI_REVIEW_SECTION.format(
-            summary=ai_review.summary,
+            summary=summary,
             severity=ai_review.severity.value.upper(),
             comments="\n".join(comment_lines) if comment_lines else "_No comments_",
             action_items="\n".join(action_lines) if action_lines else "_No action items_",
         )
+
+    def _clean_text_for_markdown(self, text: str) -> str:
+        """清理文本，使其适合 Markdown 格式.
+
+        Args:
+            text: 原始文本
+
+        Returns:
+            清理后的文本
+        """
+        if not text:
+            return ""
+
+        # 移除 JSON 代码块标记
+        import re
+        text = re.sub(r'```json\s*', '', text)
+        text = re.sub(r'```\s*', '', text)
+
+        # 将多行合并为单行（用于 summary 等简短文本）
+        lines = text.split('\n')
+        lines = [line.strip() for line in lines if line.strip()]
+
+        # 如果是单行，直接返回
+        if len(lines) <= 1:
+            return lines[0] if lines else ""
+
+        # 如果是多行，检查是否看起来像 JSON
+        joined = ' '.join(lines)
+        if joined.startswith('{') and joined.endswith('}'):
+            # 尝试提取其中的 summary 字段
+            try:
+                data = json.loads(joined)
+                if isinstance(data, dict) and 'summary' in data:
+                    return str(data['summary'])
+            except json.JSONDecodeError:
+                pass
+
+        # 返回前3行，用空格连接（避免 Markdown 格式混乱）
+        return ' '.join(lines[:3])
 
     def _generate_html_scanner_table(self, result: ScanResult) -> str:
         """生成 HTML 扫描器表格."""
