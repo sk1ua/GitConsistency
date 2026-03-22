@@ -1,20 +1,19 @@
 """扫描器协调器.
 
-并行执行多个扫描器，统一结果输出.
+并行执行安全扫描，统一结果输出.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from consistancy.config import Settings
 from consistancy.scanners.base import Finding, ScanResult
-from consistancy.scanners.drift_detector import DriftDetector
-from consistancy.scanners.hotspot_analyzer import HotspotAnalyzer
 from consistancy.scanners.security_scanner import SecurityScanner
 
 logger = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ class ScanReport:
 class ScannerOrchestrator:
     """扫描器协调器.
 
-    管理多个扫描器的并行执行和结果汇总.
+    管理安全扫描器的执行和结果汇总.
 
     Examples:
         >>> orchestrator = ScannerOrchestrator(settings)
@@ -80,132 +79,59 @@ class ScannerOrchestrator:
 
         Args:
             settings: 配置设置
-            gitnexus_client: GitNexus MCP 客户端
+            gitnexus_client: GitNexus MCP 客户端（可选）
         """
         self.settings = settings
         self.gitnexus_client = gitnexus_client
-        self._scanners: dict[str, Any] = {}
+        self._security_scanner: SecurityScanner | None = None
 
-    def register_scanner(self, name: str, scanner: Any) -> None:
-        """注册扫描器.
-
-        Args:
-            name: 扫描器名称
-            scanner: 扫描器实例
-        """
-        self._scanners[name] = scanner
-        logger.debug(f"注册扫描器: {name}")
-
-    def create_default_scanners(self) -> None:
-        """创建默认扫描器集合."""
-        if self.settings:
-            # 安全扫描器
-            security = SecurityScanner(
-                semgrep_rules=self.settings.semgrep_rules,
-                bandit_severity=self.settings.bandit_severity,
-                use_gitnexus=self.settings.is_gitnexus_configured,
-                gitnexus_client=self.gitnexus_client,
-            )
-            self.register_scanner("security", security)
-
-            # 漂移检测器
-            drift = DriftDetector(
-                embedding_model=self.settings.drift_embedding_model,
-                enable_embedding=self.settings.drift_enable_embedding,
-                threshold=self.settings.drift_threshold,
-                zscore_threshold=self.settings.drift_zscore_threshold,
-                gitnexus_client=self.gitnexus_client,
-            )
-            self.register_scanner("drift", drift)
-
-            # 热点分析器
-            hotspot = HotspotAnalyzer(
-                complexity_threshold=self.settings.hotspot_complexity_threshold,
-                lookback_days=self.settings.hotspot_lookback_days,
-            )
-            self.register_scanner("hotspot", hotspot)
-        else:
-            # 使用默认配置
-            self.register_scanner("security", SecurityScanner())
-            self.register_scanner("drift", DriftDetector())
-            self.register_scanner("hotspot", HotspotAnalyzer())
+    def _get_security_scanner(self) -> SecurityScanner:
+        """获取或创建安全扫描器."""
+        if self._security_scanner is None:
+            if self.settings:
+                self._security_scanner = SecurityScanner(
+                    semgrep_rules=self.settings.semgrep_rules,
+                    bandit_severity=self.settings.bandit_severity,
+                    use_gitnexus=self.settings.is_gitnexus_configured,
+                    gitnexus_client=self.gitnexus_client,
+                )
+            else:
+                self._security_scanner = SecurityScanner()
+        return self._security_scanner
 
     async def scan(
         self,
         path: Path,
-        scanners: list[str] | None = None,
-        skip_scanners: list[str] | None = None,
+        skip_security: bool = False,
     ) -> ScanReport:
         """执行扫描.
 
         Args:
             path: 扫描目标路径
-            scanners: 指定扫描器列表（None 表示全部）
-            skip_scanners: 跳过的扫描器列表
+            skip_security: 是否跳过安全扫描
 
         Returns:
             统一扫描报告
         """
-        import time
-
         start_time = time.perf_counter()
-        report = ScanReport(target_path=str(path))
+        results: dict[str, ScanResult] = {}
+        errors: list[str] = []
 
-        # 如果没有注册扫描器，创建默认的
-        if not self._scanners:
-            self.create_default_scanners()
-
-        # 确定要运行的扫描器
-        to_run = list(self._scanners.keys())
-        if scanners:
-            to_run = [s for s in to_run if s in scanners]
-        if skip_scanners:
-            to_run = [s for s in to_run if s not in skip_scanners]
-
-        logger.info(f"开始扫描: {path}, 扫描器: {to_run}")
-
-        # 并行执行扫描
-        tasks = []
-        for name in to_run:
-            scanner = self._scanners[name]
-            task = asyncio.create_task(
-                self._run_scanner(scanner, path, name),
-                name=f"scan_{name}",
-            )
-            tasks.append((name, task))
-
-        # 收集结果
-        for name, task in tasks:
+        # 执行安全扫描
+        if not skip_security:
             try:
-                result = await task
-                report.results[name] = result
-                logger.info(f"扫描器 {name} 完成: {len(result.findings)} 个问题")
+                scanner = self._get_security_scanner()
+                result = await scanner.scan(path)
+                results["security"] = result
             except Exception as e:
-                logger.error(f"扫描器 {name} 失败: {e}")
-                report.errors.append(f"{name}: {e}")
+                logger.error(f"安全扫描失败: {e}")
+                errors.append(f"security: {e}")
 
-        report.duration_ms = (time.perf_counter() - start_time) * 1000
-        logger.info(f"扫描完成: {len(report.all_findings)} 个问题, {report.duration_ms:.0f}ms")
+        duration_ms = (time.perf_counter() - start_time) * 1000
 
-        return report
-
-    async def _run_scanner(
-        self,
-        scanner: Any,
-        path: Path,
-        name: str,
-    ) -> ScanResult:
-        """运行单个扫描器."""
-        logger.debug(f"启动扫描器: {name}")
-        result: ScanResult = await scanner.scan(path)
-        return result
-
-    def get_scanner_info(self) -> dict[str, dict[str, Any]]:
-        """获取扫描器信息."""
-        info = {}
-        for name, scanner in self._scanners.items():
-            info[name] = {
-                "name": scanner.name,
-                "config": getattr(scanner, "config", {}),
-            }
-        return info
+        return ScanReport(
+            target_path=str(path),
+            results=results,
+            duration_ms=duration_ms,
+            errors=errors,
+        )

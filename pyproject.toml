@@ -1,7 +1,7 @@
 [project]
 name = "consistancy"
 version = "2.0.0"
-description = "现代代码健康智能守护者 - 自动代码一致性漂移检测、安全扫描、技术债务分析"
+description = "代码安全扫描与 AI 审查工具 - 集成 Semgrep、Bandit 和 LLM"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "ConsistenCy Team", email = "team@consistancy.dev" }]
@@ -38,26 +38,9 @@ dependencies = [
     "bandit[toml]>=1.7.6",
     "safety>=3.0.0",
     
-    # 代码分析
-    "radon>=6.0.1",
-    "gitpython>=3.1.40",
-    
-    # 数据 & 可视化
-    "pandas>=2.1.0",
-    "plotly>=5.18.0",
-    "numpy>=1.26.0",
-    
-    # Dashboard
-    "streamlit>=1.29.0",
-    "streamlit-plotly-events>=0.0.6",
-    
     # GitHub 集成
     "pygithub>=2.1.1",
     "pyjwt>=2.8.0",
-    
-    # 向量化 & 相似度
-    "scikit-learn>=1.3.0",
-    "sentence-transformers>=2.2.2",
     
     # 工具
     "pyyaml>=6.0.1",

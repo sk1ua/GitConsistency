@@ -1,14 +1,13 @@
 """ConsistenCy 2.0 CLI 入口.
 
 使用 Typer 构建的现代化命令行界面，支持 Rich 富文本输出.
-提供 analyze、ci、dashboard 等主要命令.
+提供 analyze、ci、scan 等主要命令.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-import os
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -26,20 +25,17 @@ from consistancy.report.generator import ReportGenerator
 from consistancy.report.templates import ReportFormat
 from consistancy.scanners.orchestrator import ScannerOrchestrator
 
-# Rich 控制台实例
 console = Console()
 
-# Typer 应用实例
 app = typer.Typer(
     name="consistancy",
-    help="ConsistenCy 2.0 - 现代代码健康智能守护者",
+    help="ConsistenCy 2.0 - 代码安全扫描与 AI 审查",
     rich_markup_mode="rich",
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 
-# 子命令组
-scan_app = typer.Typer(help="扫描相关命令")
+scan_app = typer.Typer(help="安全扫描命令")
 config_app = typer.Typer(help="配置相关命令")
 app.add_typer(scan_app, name="scan")
 app.add_typer(config_app, name="config")
@@ -50,7 +46,7 @@ def version_callback(value: bool) -> None:
     if value:
         console.print(Panel.fit(
             f"[bold blue]ConsistenCy[/bold blue] [green]v{__version__}[/green]\n"
-            "[dim]现代代码健康智能守护者[/dim]",
+            "[dim]代码安全扫描与 AI 审查[/dim]",
             title="版本信息",
             border_style="blue",
         ))
@@ -66,8 +62,8 @@ def _print_banner() -> None:
     banner.append(" 2.0", style="dim")
     banner.append("                    ║\n", style="cyan")
     banner.append("║   ", style="cyan")
-    banner.append("现代代码健康智能守护者", style="dim")
-    banner.append("         ║\n", style="cyan")
+    banner.append("代码安全扫描与 AI 审查", style="dim")
+    banner.append("           ║\n", style="cyan")
     banner.append("╚═══════════════════════════════════════════╝", style="cyan")
     console.print(banner)
     console.print()
@@ -84,15 +80,6 @@ def main(
             help="显示版本信息",
         ),
     ] = None,
-    config: Annotated[
-        Path | None,
-        typer.Option(
-            "--config", "-c",
-            help="指定配置文件路径",
-            exists=True,
-            dir_okay=False,
-        ),
-    ] = None,
     debug: Annotated[
         bool,
         typer.Option(
@@ -101,14 +88,11 @@ def main(
         ),
     ] = False,
 ) -> None:
-    """ConsistenCy 2.0 - 现代代码健康智能守护者.
+    """ConsistenCy 2.0 - 代码安全扫描与 AI 审查.
 
-    为 vibe coding / 高频 commit 项目提供：
-    - 自动代码一致性漂移检测
+    为项目提供：
     - 安全扫描（Semgrep + Bandit）
-    - 技术债务分析
     - AI 代码审查
-    - Streamlit Dashboard
     - GitHub PR 自动评论
     """
     settings = get_settings()
@@ -147,20 +131,6 @@ def analyze_command(
             help="跳过安全扫描",
         ),
     ] = False,
-    skip_drift: Annotated[
-        bool,
-        typer.Option(
-            "--skip-drift",
-            help="跳过一致性漂移检测",
-        ),
-    ] = False,
-    skip_hotspot: Annotated[
-        bool,
-        typer.Option(
-            "--skip-hotspot",
-            help="跳过技术债务分析",
-        ),
-    ] = False,
     skip_ai: Annotated[
         bool,
         typer.Option(
@@ -169,14 +139,14 @@ def analyze_command(
         ),
     ] = False,
 ) -> None:
-    """分析代码仓库的健康状况.
+    """分析代码仓库的安全状况.
 
-    运行完整的扫描流程，包括安全扫描、一致性检测、技术债务分析和 AI 审查.
+    运行安全扫描和 AI 审查.
 
     Examples:
         $ consistancy analyze ./my-project
         $ consistancy analyze . -o report.md --format markdown
-        $ consistancy analyze . --skip-security --skip-ai
+        $ consistancy analyze . --skip-ai
     """
     _print_banner()
 
@@ -186,25 +156,19 @@ def analyze_command(
         f"[bold]分析目标:[/bold] {path.absolute()}\n"
         f"[bold]输出格式:[/bold] {format}\n"
         f"[dim]安全扫描: {'✓' if not skip_security else '✗'} | "
-        f"漂移检测: {'✓' if not skip_drift else '✗'} | "
-        f"债务分析: {'✓' if not skip_hotspot else '✗'} | "
         f"AI 审查: {'✓' if not skip_ai else '✗'}[/dim]",
         title="📋 分析配置",
         border_style="green",
     ))
 
-    # 运行异步分析
     try:
         result = asyncio.run(_run_analysis(
             path=path,
             skip_security=skip_security,
-            skip_drift=skip_drift,
-            skip_hotspot=skip_hotspot,
             skip_ai=skip_ai,
             settings=settings,
         ))
 
-        # 生成报告
         generator = ReportGenerator()
         format_map = {
             "markdown": ReportFormat.MARKDOWN,
@@ -218,10 +182,9 @@ def analyze_command(
             ai_review=result.get("ai_review"),
             project_name=path.name,
             format=report_format,
-            duration=result["duration_ms"] / 1000,  # 转换为秒
+            duration=result["duration_ms"] / 1000,
         )
 
-        # 输出或保存
         if output:
             output_path = generator.save_report(report, output, report_format)
             console.print(f"\n[green]✓[/green] 报告已保存: [cyan]{output_path}[/cyan]")
@@ -231,7 +194,6 @@ def analyze_command(
             else:
                 console.print(report)
 
-        # 显示摘要
         _print_summary(result)
 
     except Exception as e:
@@ -245,22 +207,11 @@ def analyze_command(
 async def _run_analysis(
     path: Path,
     skip_security: bool,
-    skip_drift: bool,
-    skip_hotspot: bool,
     skip_ai: bool,
     settings: Settings,
 ) -> dict[str, Any]:
     """运行分析."""
     orchestrator = ScannerOrchestrator(settings)
-    orchestrator.create_default_scanners()
-
-    skip_scanners = []
-    if skip_security:
-        skip_scanners.append("security")
-    if skip_drift:
-        skip_scanners.append("drift")
-    if skip_hotspot:
-        skip_scanners.append("hotspot")
 
     with Progress(
         SpinnerColumn(),
@@ -269,19 +220,16 @@ async def _run_analysis(
     ) as progress:
         task = progress.add_task("正在分析代码...", total=None)
 
-        # 运行扫描
-        report = await orchestrator.scan(path, skip_scanners=skip_scanners)
+        report = await orchestrator.scan(path, skip_security=skip_security)
 
         progress.update(task, description="扫描完成，正在生成报告...")
 
-        # AI 审查
         ai_review = None
         if not skip_ai and settings.is_litellm_configured:
             from consistancy.reviewer import AIReviewer, ReviewContext
 
             reviewer = AIReviewer()
 
-            # 构建上下文
             all_findings = []
             for r in report.results.values():
                 all_findings.extend(r.findings)
@@ -312,10 +260,10 @@ def _print_summary(result: dict[str, Any]) -> None:
         all_findings.extend(r.findings)
 
     if not all_findings:
-        console.print("\n[green]🎉 未发现任何问题！[/green]")
+        console.print("\n[green]🎉 未发现安全问题！[/green]")
         return
 
-    table = Table(title="分析结果摘要")
+    table = Table(title="安全扫描结果摘要")
     table.add_column("严重程度", style="bold")
     table.add_column("数量", justify="right")
 
@@ -370,7 +318,6 @@ def ci_command(
     """
     _print_banner()
 
-    # 检测 GitHub Actions 环境
     if not GitHubIntegration.is_github_actions():
         console.print("[yellow]⚠[/yellow] 未检测到 CI 环境，请在 GitHub Actions 中运行")
         raise typer.Exit(1)
@@ -396,18 +343,14 @@ def ci_command(
         border_style="blue",
     ))
 
-    # 运行分析
     try:
         result = asyncio.run(_run_analysis(
             path=Path("."),
             skip_security=False,
-            skip_drift=False,
-            skip_hotspot=False,
             skip_ai=False,
             settings=get_settings(),
         ))
 
-        # 生成评论
         generator = ReportGenerator()
         comment = generator.generate_github_comment(
             scan_results=list(result["results"].values()),
@@ -419,92 +362,14 @@ def ci_command(
             console.print("\n[yellow]干运行模式，以下是将要发布的评论:[/yellow]")
             console.print(Panel(comment, title="评论预览"))
         else:
-            # 发布评论
             github = GitHubIntegration()
             asyncio.run(github.post_comment(repo, actual_pr_number, comment))
             console.print("\n[green]✓[/green] 评论已发布")
 
-        # 输出摘要
         _print_summary(result)
 
     except Exception as e:
         console.print(f"\n[red]✗ CI 分析失败: {e}[/red]")
-        raise typer.Exit(1)
-
-
-@app.command(name="dashboard")
-def dashboard_command(
-    port: Annotated[
-        int | None,
-        typer.Option(
-            "--port", "-p",
-            help="Streamlit 端口",
-        ),
-    ] = None,
-    no_browser: Annotated[
-        bool,
-        typer.Option(
-            "--no-browser",
-            help="不自动打开浏览器",
-        ),
-    ] = False,
-    data_dir: Annotated[
-        Path | None,
-        typer.Option(
-            "--data-dir",
-            help="数据目录",
-        ),
-    ] = None,
-) -> None:
-    """启动 Streamlit Dashboard.
-
-    启动交互式 Web 界面，展示代码健康指标、趋势图表和详细报告.
-
-    Examples:
-        $ consistancy dashboard
-        $ consistancy dashboard --port 8502 --no-browser
-    """
-    import subprocess
-
-    settings = get_settings()
-    actual_port = port or settings.streamlit_port
-
-    # 验证端口范围
-    if not (1 <= actual_port <= 65535):
-        console.print(f"[red]✗[/red] 端口必须在 1-65535 之间: {actual_port}")
-        raise typer.Exit(1)
-
-    console.print(Panel.fit(
-        f"[bold]端口:[/bold] {actual_port}\n"
-        f"[bold]自动打开浏览器:[/bold] {'否' if no_browser else '是'}\n"
-        f"[bold]数据目录:[/bold] {data_dir or settings.dashboard_data_dir}",
-        title="📊 Dashboard",
-        border_style="magenta",
-    ))
-
-    # 构建 streamlit 命令
-    cmd = [
-        "streamlit", "run",
-        str(Path(__file__).parent / "dashboard" / "app.py"),
-        "--server.port", str(actual_port),
-    ]
-
-    if no_browser:
-        cmd.extend(["--server.headless", "true"])
-
-    if data_dir:
-        os.environ["DASHBOARD_DATA_DIR"] = str(data_dir)
-
-    console.print(f"\n[dim]启动命令: {' '.join(cmd)}[/dim]\n")
-
-    # 启动 streamlit
-    try:
-        subprocess.run(cmd, check=True)
-    except FileNotFoundError:
-        console.print("[red]✗[/red] Streamlit 未安装，请运行: pip install streamlit")
-        raise typer.Exit(1)
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red]✗[/red] Dashboard 启动失败: {e}")
         raise typer.Exit(1)
 
 
@@ -522,7 +387,7 @@ def scan_security(
         ),
     ] = None,
 ) -> None:
-    """仅运行安全扫描（Semgrep + Bandit）."""
+    """运行安全扫描（Semgrep + Bandit）."""
     console.print(f"[blue]🔒 安全扫描:[/blue] {path}")
 
     async def run() -> None:
@@ -540,74 +405,6 @@ def scan_security(
     asyncio.run(run())
 
 
-@scan_app.command(name="drift")
-def scan_drift(
-    path: Annotated[
-        Path,
-        typer.Argument(help="扫描路径"),
-    ] = Path("."),
-    threshold: Annotated[
-        float,
-        typer.Option(
-            "--threshold", "-t",
-            help="漂移检测阈值",
-        ),
-    ] = 0.75,
-) -> None:
-    """仅运行一致性漂移检测."""
-    console.print(f"[blue]🔄 漂移检测:[/blue] {path}")
-    console.print(f"[dim]阈值: {threshold}[/dim]")
-
-    async def run() -> None:
-        from consistancy.scanners.drift_detector import DriftDetector
-
-        detector = DriftDetector(threshold=threshold)
-        result = await detector.scan(path)
-
-        console.print(f"扫描文件: {result.scanned_files}")
-        console.print(f"发现漂移: {len(result.findings)}")
-
-        for finding in result.findings:
-            console.print(f"  [{finding.severity.value}] {finding.message[:80]}")
-
-    asyncio.run(run())
-
-
-@scan_app.command(name="hotspot")
-def scan_hotspot(
-    path: Annotated[
-        Path,
-        typer.Argument(help="扫描路径"),
-    ] = Path("."),
-    days: Annotated[
-        int,
-        typer.Option(
-            "--days", "-d",
-            help="回溯天数",
-        ),
-    ] = 90,
-) -> None:
-    """仅运行技术债务热点分析."""
-    console.print(f"[blue]🔥 热点分析:[/blue] {path}")
-    console.print(f"[dim]回溯: {days} 天[/dim]")
-
-    async def run() -> None:
-        from consistancy.scanners.hotspot_analyzer import HotspotAnalyzer
-
-        analyzer = HotspotAnalyzer(lookback_days=days)
-        result = await analyzer.scan(path)
-
-        console.print(f"扫描文件: {result.scanned_files}")
-        console.print(f"发现热点: {len(result.findings)}")
-
-        for finding in result.findings:
-            meta = finding.metadata
-            score = meta.get("hotspot_score", 0)
-            console.print(f"  [{finding.severity.value}] {finding.file_path}: score={score:.1f}")
-
-    asyncio.run(run())
-
-
 @config_app.command(name="show")
 def config_show() -> None:
     """显示当前配置."""
@@ -618,7 +415,6 @@ def config_show() -> None:
     table.add_column("值")
 
     for key, value in settings.model_dump().items():
-        # 隐藏敏感信息
         if "key" in key.lower() or "token" in key.lower() or "secret" in key.lower():
             value = "***" if value else "未设置"
         table.add_row(key, str(value))
@@ -676,7 +472,6 @@ def init_command(
 
     console.print(f"[blue]📁 初始化路径:[/blue] {path.absolute()}")
 
-    # 创建 .env 文件
     env_file = path / ".env"
     if env_file.exists() and not force:
         console.print(f"[yellow]⚠[/yellow] {env_file} 已存在，使用 --force 覆盖")
@@ -688,11 +483,9 @@ GITHUB_TOKEN=your_github_token_here
         env_file.write_text(env_content, encoding="utf-8")
         console.print(f"[green]✓[/green] 创建: {env_file}")
 
-    # 创建 .github/workflows 目录
     github_dir = path / ".github" / "workflows"
     github_dir.mkdir(parents=True, exist_ok=True)
 
-    # 创建工作流文件
     workflow_file = github_dir / "consistency.yml"
     workflow_content = """name: 🔍 ConsistenCy Code Review
 
