@@ -10,7 +10,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -249,7 +249,7 @@ async def _run_analysis(
     skip_hotspot: bool,
     skip_ai: bool,
     settings: Settings,
-) -> dict:
+) -> dict[str, Any]:
     """运行分析."""
     orchestrator = ScannerOrchestrator(settings)
     orchestrator.create_default_scanners()
@@ -305,7 +305,7 @@ async def _run_analysis(
     }
 
 
-def _print_summary(result: dict) -> None:
+def _print_summary(result: dict[str, Any]) -> None:
     """打印分析摘要."""
     all_findings = []
     for r in result["results"].values():
@@ -319,7 +319,7 @@ def _print_summary(result: dict) -> None:
     table.add_column("严重程度", style="bold")
     table.add_column("数量", justify="right")
 
-    severity_counts = {}
+    severity_counts: dict[str, int] = {}
     for f in all_findings:
         severity_counts[f.severity.value] = severity_counts.get(f.severity.value, 0) + 1
 
@@ -520,7 +520,7 @@ def scan_security(
     """仅运行安全扫描（Semgrep + Bandit）."""
     console.print(f"[blue]🔒 安全扫描:[/blue] {path}")
 
-    async def run():
+    async def run() -> None:
         from consistancy.scanners.security_scanner import SecurityScanner
 
         scanner = SecurityScanner(semgrep_rules=rules)
@@ -553,7 +553,7 @@ def scan_drift(
     console.print(f"[blue]🔄 漂移检测:[/blue] {path}")
     console.print(f"[dim]阈值: {threshold}[/dim]")
 
-    async def run():
+    async def run() -> None:
         from consistancy.scanners.drift_detector import DriftDetector
 
         detector = DriftDetector(threshold=threshold)
@@ -586,7 +586,7 @@ def scan_hotspot(
     console.print(f"[blue]🔥 热点分析:[/blue] {path}")
     console.print(f"[dim]回溯: {days} 天[/dim]")
 
-    async def run():
+    async def run() -> None:
         from consistancy.scanners.hotspot_analyzer import HotspotAnalyzer
 
         analyzer = HotspotAnalyzer(lookback_days=days)

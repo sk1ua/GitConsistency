@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from cachetools import TTLCache
+from cachetools import TTLCache  # type: ignore[import-untyped]
 
 T = TypeVar("T")
 
@@ -96,11 +96,11 @@ class GitNexusCache:
         if self._is_file_cache_valid(file_path, self.default_ttl):
             try:
                 with open(file_path, "rb") as f:
-                    entry: CacheEntry[T] = pickle.load(f)
-                if not entry.is_expired:
+                    file_entry: CacheEntry[T] = pickle.load(f)
+                if not file_entry.is_expired:
                     # 回填内存缓存
-                    self.memory_cache[key] = entry
-                    return entry.data
+                    self.memory_cache[key] = file_entry
+                    return file_entry.data
             except (pickle.PickleError, OSError):
                 pass
 

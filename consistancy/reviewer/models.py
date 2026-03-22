@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -100,7 +101,7 @@ class ReviewResult(BaseModel):
     severity: Severity = Field(Severity.LOW, description="Overall severity")
     comments: list[ReviewComment] = Field(default_factory=list, description="Review comments")
     action_items: list[str] = Field(default_factory=list, description="Required actions")
-    metadata: dict = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     @field_validator("comments")
     @classmethod

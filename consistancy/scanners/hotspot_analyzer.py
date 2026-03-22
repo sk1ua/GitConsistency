@@ -273,9 +273,10 @@ class HotspotAnalyzer(BaseScanner):
             )
             stdout, _ = await proc.communicate()
 
-            result = json.loads(stdout.decode())
-            mi_info = result.get(file_path, {})
-            return mi_info.get("mi", 50.0)
+            result: dict[str, Any] = json.loads(stdout.decode())
+            mi_info: dict[str, Any] = result.get(file_path, {})
+            mi_value = mi_info.get("mi", 50.0)
+            return float(mi_value) if mi_value is not None else 50.0
 
         except Exception:
             return 50.0  # 默认值

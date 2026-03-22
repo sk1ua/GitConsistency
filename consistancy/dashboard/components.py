@@ -91,7 +91,7 @@ class Components:
         """渲染严重程度饼图."""
         import plotly.express as px
 
-        severity_counts = {}
+        severity_counts: dict[str, int] = {}
         for f in findings:
             sev = f.get("severity", "unknown")
             severity_counts[sev] = severity_counts.get(sev, 0) + 1
@@ -224,7 +224,7 @@ class Components:
             return
 
         # 按文件分组统计
-        file_counts = {}
+        file_counts: dict[str, int] = {}
         for d in drifts:
             file = d.get("file", "unknown")
             file_counts[file] = file_counts.get(file, 0) + 1

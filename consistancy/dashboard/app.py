@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
+from typing import Any
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent
@@ -26,7 +27,7 @@ from consistancy.scanners.orchestrator import ScannerOrchestrator
 async def run_scan(
     project_path: str,
     config: dict[str, bool],
-) -> dict:
+) -> dict[str, Any]:
     """运行扫描.
 
     Args:
@@ -60,7 +61,9 @@ async def run_scan(
         try:
             from consistancy.reviewer import AIReviewer, ReviewContext
 
-            reviewer = AIReviewer(model=config.get("ai_model", "deepseek/deepseek-chat"))
+            model_value = config.get("ai_model", "deepseek/deepseek-chat")
+            model_str = str(model_value) if model_value is not None else None
+            reviewer = AIReviewer(model=model_str)
 
             # 构建上下文
             context = ReviewContext(
@@ -106,7 +109,7 @@ async def run_scan(
     }
 
 
-def render_overview(json_report: dict) -> None:
+def render_overview(json_report: dict[str, Any]) -> None:
     """渲染概览页面."""
     st.header("📊 概览")
 
@@ -144,7 +147,7 @@ def render_overview(json_report: dict) -> None:
             st.metric(f"{name.upper()}", f"{count} 个问题")
 
 
-def render_security(json_report: dict) -> None:
+def render_security(json_report: dict[str, Any]) -> None:
     """渲染安全页面."""
     st.header("🔐 安全扫描")
 
@@ -165,7 +168,7 @@ def render_security(json_report: dict) -> None:
         return
 
     # 分类统计
-    severity_counts = {}
+    severity_counts: dict[str, int] = {}
     for f in findings:
         sev = f.get("severity", "unknown")
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
@@ -179,7 +182,7 @@ def render_security(json_report: dict) -> None:
     Components.render_findings_table(findings, "安全漏洞")
 
 
-def render_hotspots(json_report: dict) -> None:
+def render_hotspots(json_report: dict[str, Any]) -> None:
     """渲染热点页面."""
     st.header("🔥 技术债务热点")
 
@@ -220,7 +223,7 @@ def render_hotspots(json_report: dict) -> None:
     st.dataframe(hotspots_sorted, use_container_width=True)
 
 
-def render_drift(json_report: dict) -> None:
+def render_drift(json_report: dict[str, Any]) -> None:
     """渲染漂移页面."""
     st.header("🔄 一致性漂移")
 
@@ -260,7 +263,7 @@ def render_drift(json_report: dict) -> None:
     Components.render_findings_table(findings, "一致性漂移")
 
 
-def render_ai_review(json_report: dict) -> None:
+def render_ai_review(json_report: dict[str, Any]) -> None:
     """渲染 AI 审查页面."""
     st.header("🤖 AI Code Review")
 

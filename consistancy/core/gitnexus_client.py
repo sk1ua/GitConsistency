@@ -197,6 +197,8 @@ class GitNexusClient:
                 # 验证连接
                 await self._call_method("ping", {})
             else:
+                if self.mcp_command is None:
+                    raise GitNexusError("mcp_command is not set")
                 self._process = await asyncio.create_subprocess_exec(
                     self.mcp_command,
                     *self.mcp_args,
@@ -279,7 +281,7 @@ class GitNexusClient:
         if not self._session:
             raise GitNexusConnectionError("会话未建立")
 
-        url = urljoin(self.mcp_url + "/", f"tools/{msg.method}")
+        url = urljoin((self.mcp_url or "") + "/", f"tools/{msg.method}")
 
         async with self._session.post(
             url,
@@ -296,15 +298,20 @@ class GitNexusClient:
 
     async def _call_stdio(self, msg: MCPMessage) -> Any:
         """通过 stdio 调用方法."""
-        if not self._process or self._process.stdin.is_closing():
+        if not self._process or self._process.stdin is None or self._process.stdin.is_closing():
             raise GitNexusConnectionError("进程未运行")
 
         request = json.dumps(msg.to_dict()) + "\n"
         self._process.stdin.write(request.encode())
         await self._process.stdin.drain()
 
+        if self._process.stdout is None:
+            raise GitNexusResponseError("进程无stdout")
+
         # 读取响应
         line = await self._process.stdout.readline()
+        if not isinstance(line, bytes):
+            raise GitNexusResponseError("进程无响应")
         if not line:
             raise GitNexusResponseError("进程无响应")
 
@@ -441,7 +448,9 @@ class GitNexusClient:
             "query",
             {"query": query, "limit": limit},
         )
-        return result.get("results", [])
+        result_dict: dict[str, Any] = result if isinstance(result, dict) else {}
+        results = result_dict.get("results", [])
+        return results if isinstance(results, list) else []
 
     async def detect_changes(
         self,
@@ -490,7 +499,7 @@ class GitNexusClient:
         if pattern is None:
             stats_before = self.cache.get_stats()
             self.cache.clear()
-            return stats_before["memory_entries"] + stats_before["file_entries"]
+            return int(stats_before["memory_entries"]) + int(stats_before["file_entries"])
 
         # TODO: 实现模式匹配删除
         return 0

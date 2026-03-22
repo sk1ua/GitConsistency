@@ -129,7 +129,7 @@ class DataManager:
             return None
 
         try:
-            data = json.loads(self.latest_file.read_text(encoding="utf-8"))
+            data: dict[str, Any] = json.loads(self.latest_file.read_text(encoding="utf-8"))
             return data
         except Exception as e:
             logger.error(f"加载最新扫描结果失败: {e}")

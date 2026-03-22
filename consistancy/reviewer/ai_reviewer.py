@@ -279,7 +279,7 @@ class AIReviewer:
 
         # 提取内容
         content = response["choices"][0]["message"]["content"]
-        return content
+        return str(content)
 
     def _parse_response(self, content: str) -> ReviewResult:
         """解析 LLM 响应.
@@ -348,8 +348,10 @@ class AIReviewer:
                         file=current_file,
                         line=current_line,
                         message=' '.join(current_message).strip(),
+                        suggestion=None,
                         severity=Severity.MEDIUM,
                         category=CommentCategory.OTHER,
+                        confidence=0.8,
                     ))
                     current_message = []
 
@@ -366,8 +368,10 @@ class AIReviewer:
                 file=current_file,
                 line=current_line,
                 message=' '.join(current_message).strip(),
+                suggestion=None,
                 severity=Severity.MEDIUM,
                 category=CommentCategory.OTHER,
+                confidence=0.8,
             ))
 
         return ReviewResult(

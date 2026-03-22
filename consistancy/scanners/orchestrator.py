@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from consistancy.config import Settings
-from consistancy.scanners.base import ScanResult
+from consistancy.scanners.base import Finding, ScanResult
 from consistancy.scanners.drift_detector import DriftDetector
 from consistancy.scanners.hotspot_analyzer import HotspotAnalyzer
 from consistancy.scanners.security_scanner import SecurityScanner
@@ -30,9 +30,9 @@ class ScanReport:
     errors: list[str] = field(default_factory=list)
 
     @property
-    def all_findings(self) -> list:
+    def all_findings(self) -> list[Finding]:
         """获取所有发现的问题."""
-        findings = []
+        findings: list[Finding] = []
         for result in self.results.values():
             findings.extend(result.findings)
         return findings
@@ -40,22 +40,24 @@ class ScanReport:
     @property
     def summary(self) -> dict[str, Any]:
         """获取汇总信息."""
-        summary = {
-            "total_findings": 0,
-            "severity_counts": {},
-            "scanner_counts": {},
-        }
+        severity_counts: dict[str, int] = {}
+        scanner_counts: dict[str, int] = {}
+        total_findings = 0
 
         for scanner_name, result in self.results.items():
             count = len(result.findings)
-            summary["scanner_counts"][scanner_name] = count
-            summary["total_findings"] += count
+            scanner_counts[scanner_name] = count
+            total_findings += count
 
             for finding in result.findings:
                 sev = finding.severity.value
-                summary["severity_counts"][sev] = summary["severity_counts"].get(sev, 0) + 1
+                severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
-        return summary
+        return {
+            "total_findings": total_findings,
+            "severity_counts": severity_counts,
+            "scanner_counts": scanner_counts,
+        }
 
 
 class ScannerOrchestrator:
@@ -193,7 +195,7 @@ class ScannerOrchestrator:
     ) -> ScanResult:
         """运行单个扫描器."""
         logger.debug(f"启动扫描器: {name}")
-        result = await scanner.scan(path)
+        result: ScanResult = await scanner.scan(path)
         return result
 
     def get_scanner_info(self) -> dict[str, dict[str, Any]]:
