@@ -68,6 +68,7 @@ class DriftDetector(BaseScanner):
     def __init__(
         self,
         embedding_model: str = "all-MiniLM-L6-v2",
+        enable_embedding: bool = True,
         threshold: float = 0.75,
         zscore_threshold: float = 2.0,
         gitnexus_client: Any | None = None,
@@ -77,6 +78,7 @@ class DriftDetector(BaseScanner):
 
         Args:
             embedding_model: sentence-transformers 模型名称
+            enable_embedding: 是否启用 embedding 计算
             threshold: embedding 相似度阈值（低于此值视为漂移）
             zscore_threshold: 统计偏离 Z-score 阈值
             gitnexus_client: GitNexus MCP 客户端
@@ -84,6 +86,7 @@ class DriftDetector(BaseScanner):
         """
         super().__init__(config)
         self.embedding_model_name = embedding_model
+        self.enable_embedding = enable_embedding
         self.threshold = threshold
         self.zscore_threshold = zscore_threshold
         self.gitnexus_client = gitnexus_client
@@ -177,8 +180,9 @@ class DriftDetector(BaseScanner):
         if import_patterns:
             patterns["import_style"] = import_patterns
 
-        # 如果有 embedding 模型，计算 embedding
-        await self._compute_embeddings(patterns)
+        # 如果启用 embedding 且不是 CI 环境，计算 embedding
+        if self.enable_embedding:
+            await self._compute_embeddings(patterns)
 
         return patterns
 

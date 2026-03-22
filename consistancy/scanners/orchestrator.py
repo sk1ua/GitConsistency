@@ -110,6 +110,8 @@ class ScannerOrchestrator:
 
             # 漂移检测器
             drift = DriftDetector(
+                embedding_model=self.settings.drift_embedding_model,
+                enable_embedding=self.settings.drift_enable_embedding,
                 threshold=self.settings.drift_threshold,
                 zscore_threshold=self.settings.drift_zscore_threshold,
                 gitnexus_client=self.gitnexus_client,

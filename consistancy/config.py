@@ -162,6 +162,10 @@ class Settings(BaseSettings):
         default="all-MiniLM-L6-v2",
         description="漂移检测使用的 embedding 模型",
     )
+    drift_enable_embedding: bool = Field(
+        default=True,
+        description="是否启用 embedding 计算（禁用可加快扫描速度）",
+    )
     drift_threshold: float = Field(
         default=0.75,
         ge=0.0,
