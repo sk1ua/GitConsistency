@@ -10,6 +10,8 @@ from typing import Any
 
 from consistency.reviewer.models import ReviewComment, ReviewResult, Severity
 
+__all__ = ["BaseAgent", "AgentResult", "Severity"]
+
 logger = logging.getLogger(__name__)
 
 
