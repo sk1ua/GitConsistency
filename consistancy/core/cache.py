@@ -33,7 +33,7 @@ class CacheEntry(Generic[T]):
 
     @property
     def is_expired(self) -> bool:
-        return datetime.utcnow() - self.created_at > timedelta(seconds=self.ttl)
+        return datetime.utcnow() - self.created_at >= timedelta(seconds=self.ttl)
 
 
 class GitNexusCache:
@@ -123,7 +123,7 @@ class GitNexusCache:
             value: 缓存值
             ttl: 过期时间（秒），默认使用初始化值
         """
-        ttl = ttl or self.default_ttl
+        ttl = self.default_ttl if ttl is None else ttl
         entry = CacheEntry(value, ttl)
 
         # 1. 写入内存缓存

@@ -84,7 +84,7 @@ class TestGitNexusCache:
     def test_expired_cache(self, cache: GitNexusCache) -> None:
         """测试过期缓存."""
         cache.set("key", "value", ttl=0)  # 立即过期
-        time.sleep(0.01)
+        time.sleep(0.1)  # 确保有足够时间过期
         
         assert cache.get("key") is None
 
