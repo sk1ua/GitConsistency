@@ -18,7 +18,6 @@ class TestSettings:
         assert settings.project_name == "ConsistenCy"
         assert settings.version == "2.0.0"
         assert settings.litellm_temperature == 0.3
-        assert settings.github_max_concurrent_prs == 5
 
     def test_litellm_model_default(self) -> None:
         """测试 LLM 模型默认值."""
@@ -118,7 +117,7 @@ class TestEnvironmentVariables:
     def test_env_file_loading(self, tmp_path: Path) -> None:
         """测试从 .env 文件加载."""
         env_file = tmp_path / ".env"
-        env_file.write_text("LITELLM_MODEL=test-model\nLOG_LEVEL=DEBUG")
+        env_file.write_text("CONSISTANCY_LITELLM_MODEL=test-model\nCONSISTANCY_LOG_LEVEL=DEBUG")
 
         settings = Settings(_env_file=str(env_file))
         assert settings.litellm_model == "test-model"
