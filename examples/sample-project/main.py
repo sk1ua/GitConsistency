@@ -54,6 +54,6 @@ def calculate_discount(price, user_type):
 if __name__ == "__main__":
     # 问题 7: 敏感信息打印（安全问题）
     print(f"Database URL: {os.getenv('DATABASE_URL', 'postgresql://admin:secret@localhost/db')}")
-    
+
     result = process_user_input("1 + 2")
     print(f"Result: {result}")

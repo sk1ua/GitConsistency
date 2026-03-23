@@ -22,8 +22,8 @@ __license__ = "MIT"
 from consistency.config import Settings, get_settings
 
 __all__ = [
-    "__version__",
-    "__author__",
     "Settings",
+    "__author__",
+    "__version__",
     "get_settings",
 ]

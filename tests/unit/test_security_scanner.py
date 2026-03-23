@@ -1,6 +1,5 @@
 """安全扫描器单元测试."""
 
-import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,9 +7,7 @@ import pytest
 
 from consistency.scanners.base import Finding, Severity
 from consistency.scanners.security_scanner import (
-    BanditConfig,
     SecurityScanner,
-    SemgrepConfig,
 )
 
 
@@ -261,7 +258,7 @@ class TestScanExecution:
 
         with patch.object(scanner, "_run_semgrep", new_callable=AsyncMock) as mock_semgrep, \
              patch.object(scanner, "_run_bandit", new_callable=AsyncMock) as mock_bandit:
-            
+
             mock_semgrep.return_value = semgrep_mock
             mock_bandit.return_value = bandit_mock
 
@@ -278,7 +275,7 @@ class TestScanExecution:
 
         with patch.object(scanner, "_run_semgrep", new_callable=AsyncMock) as mock_semgrep, \
              patch.object(scanner, "_run_bandit", new_callable=AsyncMock) as mock_bandit:
-            
+
             # Semgrep 成功，Bandit 失败
             mock_semgrep.return_value = ([], 5, [])
             mock_bandit.side_effect = Exception("Bandit crashed")

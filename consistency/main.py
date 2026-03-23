@@ -21,11 +21,8 @@ from rich.text import Text
 from consistency import __version__
 from consistency.config import Settings, get_settings
 from consistency.exceptions import (
-    AIReviewError,
-    ConfigError,
     GitConsistencyError,
     GitHubError,
-    ScanError,
 )
 from consistency.github_integration import GitHubIntegration
 from consistency.report.generator import ReportGenerator
@@ -206,11 +203,10 @@ def analyze_command(
         if output:
             output_path = generator.save_report(report, output, report_format)
             console.print(f"\n[green]✓[/green] 报告已保存: [cyan]{output_path}[/cyan]")
+        elif isinstance(report, dict):
+            console.print_json(json.dumps(report, indent=2))
         else:
-            if isinstance(report, dict):
-                console.print_json(json.dumps(report, indent=2))
-            else:
-                console.print(report)
+            console.print(report)
 
         _print_summary(result)
 

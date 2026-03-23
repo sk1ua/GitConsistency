@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any
 
 from consistency.agents.base import AgentResult, BaseAgent
 from consistency.config import get_settings

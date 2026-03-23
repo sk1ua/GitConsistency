@@ -1,7 +1,6 @@
 """报告生成器单元测试."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -231,7 +230,7 @@ class TestGenerateGitHubComment:
     def test_generate_github_comment_truncation(self) -> None:
         """测试评论截断."""
         generator = ReportGenerator()
-        
+
         # 创建很多发现
         findings = [
             Finding(rule_id=f"R{i}", message=f"Issue {i}" * 1000, severity=Severity.HIGH)
@@ -380,6 +379,6 @@ class TestGenerateDispatch:
     def test_generate_invalid_format(self) -> None:
         """测试无效格式."""
         generator = ReportGenerator()
-        
+
         with pytest.raises(ValueError):
             generator.generate([], format="invalid")  # type: ignore

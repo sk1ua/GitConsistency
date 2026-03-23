@@ -5,13 +5,12 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from consistency.config import Settings, get_settings
-from consistency.exceptions import ConfigError, ValidationError
+from consistency.exceptions import ConfigError
 
 
 class TestConfigIntegration:
@@ -63,8 +62,6 @@ class TestExceptionHierarchy:
 
     def test_config_error(self) -> None:
         """测试配置错误."""
-        from consistency.exceptions import ConfigError
-
         exc = ConfigError("Invalid config", details={"field": "api_key"})
         assert exc.error_code == "CONFIG_ERROR"
         assert exc.details["field"] == "api_key"

@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from consistency.agents.base import Severity
+
 logger = logging.getLogger(__name__)
 
 

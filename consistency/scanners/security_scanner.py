@@ -403,7 +403,7 @@ class SecurityScanner(BaseScanner):
                 line=issue.get("line_number", 0),
                 column=issue.get("col_offset", 0),
                 code_snippet=issue.get("code", "").strip(),
-                confidence=issue.get("issue_confidence") == "HIGH" and 0.9 or 0.6,
+                confidence=(issue.get("issue_confidence") == "HIGH" and 0.9) or 0.6,
                 metadata={
                     "source": "bandit",
                     "test_name": issue.get("test_name", ""),

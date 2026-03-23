@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consistency.github_integration import GitHubIntegration, PRComment, PRInfo
+from consistency.github_integration import GitHubIntegration, PRComment
 
 
 class TestGitHubIntegrationInit:
@@ -15,7 +15,7 @@ class TestGitHubIntegrationInit:
         """测试默认初始化."""
         with patch("consistency.github_integration.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(github_token="test-token")
-            
+
             github = GitHubIntegration()
             assert github.token == "test-token"
             assert github.delete_old_comments is True
@@ -36,7 +36,7 @@ class TestGitHubIntegrationInit:
         """测试无 token 时警告."""
         with patch("consistency.github_integration.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(github_token=None)
-            
+
             with patch("consistency.github_integration.logger") as mock_logger:
                 GitHubIntegration()
                 mock_logger.warning.assert_called_once()
@@ -207,7 +207,7 @@ class TestBatchComments:
 
         with patch.object(github, "post_comment", return_value={"id": 1}) as mock_post, \
              patch.object(github, "post_file_comment", return_value={"id": 2}) as mock_file:
-            
+
             results = await github.post_comments_batch("owner/repo", 1, comments, max_concurrent=2)
 
             assert len(results) == 2

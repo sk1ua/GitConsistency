@@ -46,7 +46,7 @@ class TestGitNexusCache:
         """测试初始化创建目录."""
         cache_dir = tmp_path / "new_cache"
         assert not cache_dir.exists()
-        
+
         GitNexusCache(cache_dir)
         assert cache_dir.exists()
 
@@ -71,13 +71,13 @@ class TestGitNexusCache:
     def test_file_cache_fallback(self, cache: GitNexusCache) -> None:
         """测试文件缓存回退."""
         cache.set("key", "value")
-        
+
         # 创建新缓存实例（模拟重启），内存缓存为空
         new_cache = GitNexusCache(
             file_cache_dir=cache.file_cache_dir,
             default_ttl=60,
         )
-        
+
         # 应该从文件缓存获取
         assert new_cache.get("key") == "value"
 
@@ -85,14 +85,14 @@ class TestGitNexusCache:
         """测试过期缓存."""
         cache.set("key", "value", ttl=0)  # 立即过期
         time.sleep(0.1)  # 确保有足够时间过期
-        
+
         assert cache.get("key") is None
 
     def test_delete(self, cache: GitNexusCache) -> None:
         """测试删除."""
         cache.set("key", "value")
         assert cache.get("key") == "value"
-        
+
         deleted = cache.delete("key")
         assert deleted
         assert cache.get("key") is None
@@ -106,9 +106,9 @@ class TestGitNexusCache:
         """测试清空."""
         cache.set("key1", "value1")
         cache.set("key2", "value2")
-        
+
         cache.clear()
-        
+
         assert cache.get("key1") is None
         assert cache.get("key2") is None
 
@@ -117,7 +117,7 @@ class TestGitNexusCache:
         key1 = cache.make_key("part1", "part2", "part3")
         key2 = cache.make_key("part1", "part2", "part3")
         key3 = cache.make_key("part1", "part2", "different")
-        
+
         assert key1 == key2
         assert key1 != key3
         assert len(key1) == 64  # SHA256 十六进制长度
@@ -126,9 +126,9 @@ class TestGitNexusCache:
         """测试自定义 TTL."""
         cache.set("short", "value", ttl=0)
         cache.set("long", "value", ttl=3600)
-        
+
         time.sleep(0.01)
-        
+
         assert cache.get("short") is None
         assert cache.get("long") == "value"
 
@@ -136,9 +136,9 @@ class TestGitNexusCache:
         """测试统计信息."""
         cache.set("key1", "value1")
         cache.set("key2", "value2")
-        
+
         stats = cache.get_stats()
-        
+
         assert stats["memory_entries"] == 2
         assert stats["file_entries"] == 2
         assert stats["file_cache_size_mb"] >= 0
@@ -151,10 +151,10 @@ class TestGitNexusCache:
             "dict": {"nested": "value"},
             "tuple": (4, 5, 6),
         }
-        
+
         cache.set("complex", data)
         result = cache.get("complex")
-        
+
         assert result == data
 
     def test_memory_lru_eviction(self, tmp_path: Path) -> None:
@@ -164,11 +164,11 @@ class TestGitNexusCache:
             memory_maxsize=2,  # 最多2个
             default_ttl=60,
         )
-        
+
         cache.set("key1", "value1")
         cache.set("key2", "value2")
         cache.set("key3", "value3")  # 应该淘汰 key1
-        
+
         # key1 应该被从内存淘汰，但文件缓存仍在
         # 由于文件缓存回退，key1 仍可获得
         # 注意：这取决于具体实现细节

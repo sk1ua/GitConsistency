@@ -68,9 +68,9 @@ def insecure_function(password):
     @pytest.mark.asyncio
     async def test_report_generation(self, sample_project: Path) -> None:
         """测试报告生成."""
-        from consistency.scanners.orchestrator import ScannerOrchestrator
         from consistency.report.generator import ReportGenerator
         from consistency.report.templates import ReportFormat
+        from consistency.scanners.orchestrator import ScannerOrchestrator
 
         # 运行扫描
         orchestrator = ScannerOrchestrator()
@@ -120,6 +120,7 @@ class TestCLIE2E:
     def test_cli_help(self) -> None:
         """测试 CLI 帮助."""
         from typer.testing import CliRunner
+
         from consistency.main import app
 
         runner = CliRunner()
@@ -131,6 +132,7 @@ class TestCLIE2E:
     def test_cli_version(self) -> None:
         """测试 CLI 版本."""
         from typer.testing import CliRunner
+
         from consistency.main import app
 
         runner = CliRunner()
@@ -142,6 +144,7 @@ class TestCLIE2E:
     def test_cli_config_validate(self) -> None:
         """测试配置验证命令."""
         from typer.testing import CliRunner
+
         from consistency.main import app
 
         runner = CliRunner()

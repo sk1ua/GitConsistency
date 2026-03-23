@@ -224,7 +224,7 @@ class StyleAgent(BaseAgent):
             if prev_is_stdlib is False and is_stdlib:
                 findings.append({
                     "type": "import_order",
-                    "message": f"导入排序可能不正确，标准库导入应在第三方库之前",
+                    "message": "导入排序可能不正确，标准库导入应在第三方库之前",
                     "line": i,
                     "severity": "INFO",
                 })

@@ -356,7 +356,7 @@ class ReportGenerator:
 
     def _count_by_severity(self, findings: list[Finding]) -> dict[Severity, int]:
         """按严重程度统计."""
-        counts: dict[Severity, int] = {s: 0 for s in Severity}
+        counts: dict[Severity, int] = dict.fromkeys(Severity, 0)
         for finding in findings:
             counts[finding.severity] = counts.get(finding.severity, 0) + 1
         return counts

@@ -66,11 +66,11 @@ class ReviewContext:
         }
 
 
-class PromptTemplate:  # noqa: E501
+class PromptTemplate:
     """Prompt 模板基类."""
 
     # 系统 Prompt - 定义 AI 角色和能力
-    SYSTEM_PROMPT = (  # noqa: E501
+    SYSTEM_PROMPT = (
         """You are an expert code reviewer with deep expertise in software engineering, security, and code quality.
 
 Your responsibilities:

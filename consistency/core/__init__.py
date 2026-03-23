@@ -14,11 +14,11 @@ from consistency.core.gitnexus_client import (
 from consistency.core.schema import ContextResult
 
 __all__ = [
+    "ContextResult",
+    "GitNexusCache",
     "GitNexusClient",
-    "GitNexusError",
     "GitNexusContext",
+    "GitNexusError",
     "GitNexusQueryResult",
     "get_gitnexus_client",
-    "GitNexusCache",
-    "ContextResult",
 ]

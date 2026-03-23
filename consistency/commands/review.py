@@ -10,7 +10,6 @@ Examples:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import subprocess
 from pathlib import Path
@@ -23,7 +22,6 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from consistency.agents import ReviewSupervisor
-from consistency.agents.base import Severity
 from consistency.core import GitNexusClient
 from consistency.tools.diff_tools import DiffParser, IncrementalReviewer
 

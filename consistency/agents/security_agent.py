@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import field
 from pathlib import Path
 from typing import Any
 
@@ -180,13 +179,6 @@ class SecurityAgent(BaseAgent):
         """确定总体严重程度."""
         if not findings:
             return Severity.LOW
-
-        severity_order = [
-            Severity.CRITICAL,
-            Severity.HIGH,
-            Severity.MEDIUM,
-            Severity.LOW,
-        ]
 
         worst = Severity.LOW
         for finding in findings:

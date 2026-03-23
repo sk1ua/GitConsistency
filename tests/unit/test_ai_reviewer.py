@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from consistency.reviewer.ai_reviewer import AIReviewer, ReviewCache
-from consistency.reviewer.models import CommentCategory, ReviewComment, ReviewResult, Severity
+from consistency.reviewer.ai_reviewer import AIReviewer
+from consistency.reviewer.models import CommentCategory, ReviewResult, Severity
 from consistency.reviewer.prompts import ReviewContext, ReviewType
 
 
@@ -26,7 +26,7 @@ class TestAIReviewerInit:
                 litellm_timeout=60,
                 litellm_api_key="test-key",
             )
-            
+
             reviewer = AIReviewer()
             assert reviewer.model == "deepseek/deepseek-chat"
             assert reviewer.fallback_model == "anthropic/claude-3-haiku"
@@ -50,7 +50,7 @@ class TestAIReviewerInit:
                 litellm_model="test",
                 litellm_api_key=None,
             )
-            
+
             with patch("consistency.reviewer.ai_reviewer.logger") as mock_logger:
                 AIReviewer()
                 mock_logger.warning.assert_called_once()

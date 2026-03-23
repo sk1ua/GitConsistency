@@ -4,7 +4,7 @@
 """
 
 from consistency.scanners.base import BaseScanner, Finding, ScanResult, Severity
-from consistency.scanners.orchestrator import ScanReport, ScannerOrchestrator
+from consistency.scanners.orchestrator import ScannerOrchestrator, ScanReport
 from consistency.scanners.security_scanner import SecurityScanner
 
 __all__ = [

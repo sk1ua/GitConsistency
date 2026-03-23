@@ -7,7 +7,7 @@ from consistency.report.generator import ReportGenerator
 from consistency.report.templates import ReportFormat, ReportTheme
 
 __all__ = [
-    "ReportGenerator",
     "ReportFormat",
+    "ReportGenerator",
     "ReportTheme",
 ]

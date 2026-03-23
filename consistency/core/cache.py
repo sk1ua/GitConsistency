@@ -13,7 +13,7 @@ Security Note:
 from __future__ import annotations
 
 import hashlib
-import pickle  # noqa: S403 - Safe for local cache only
+import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Generic, TypeVar

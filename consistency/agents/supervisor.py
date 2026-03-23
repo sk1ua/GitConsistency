@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from consistency.agents.base import AgentResult
+from consistency.agents.base import AgentResult, Severity
 from consistency.agents.logic_agent import LogicAgent
 from consistency.agents.security_agent import SecurityAgent
 from consistency.agents.style_agent import StyleAgent
@@ -104,7 +104,7 @@ class ReviewSupervisor:
                     AgentResult(
                         agent_name=agent_name,
                         summary=f"{agent_name} 执行失败: {result}",
-                        severity=consistency.reviewer.models.Severity.LOW,
+                        severity=Severity.LOW,
                         comments=[],
                     ),
                 )
