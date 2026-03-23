@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consistency.github_integration import GitHubIntegration, PRComment
+from consistency.github_integration import GitHubIntegration
+from consistency.exceptions import GitHubError, PRComment
 
 
 class TestGitHubIntegrationInit:

@@ -328,7 +328,7 @@ class TestSaveReport:
         report = {"key": "value", "number": 42}
         output_path = tmp_path / "report.json"
 
-        saved_path = generator.save_report(report, output_path, ReportFormat.JSON)
+        generator.save_report(report, output_path, ReportFormat.JSON)
 
         content = output_path.read_text()
         assert '"key": "value"' in content

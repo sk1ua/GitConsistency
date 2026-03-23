@@ -345,7 +345,7 @@ class TestReviewWithFallback:
                 "comments": [],
             })
 
-            result = await reviewer.review_with_fallback(ReviewContext(diff="test"))
+            await reviewer.review_with_fallback(ReviewContext(diff="test"))
 
             # 只调用一次
             assert mock_call.call_count == 1
