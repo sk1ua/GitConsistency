@@ -52,7 +52,8 @@ def version_callback(value: bool) -> None:
     if value:
         console.print(
             Panel.fit(
-                f"[bold blue]GitConsistency[/bold blue] [green]v{__version__}[/green]\n[dim]代码安全扫描与 AI 审查[/dim]",
+                f"[bold blue]GitConsistency[/bold blue] [green]v{__version__}[/green]\n"
+                f"[dim]代码安全扫描与 AI 审查[/dim]",
                 title="版本信息",
                 border_style="blue",
             )

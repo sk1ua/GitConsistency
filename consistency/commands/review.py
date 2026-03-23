@@ -128,7 +128,7 @@ class ReviewCommand:
             console=console,
             transient=True,
         ) as progress:
-            task = progress.add_task("分析中...", total=None)
+            progress.add_task("分析中...", total=None)
 
             try:
                 result = await self.supervisor.review(file_path, code)

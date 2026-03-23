@@ -130,7 +130,12 @@ class GitHubAuthError(GitHubError):
 class GitHubRateLimitError(GitHubError):
     """GitHub 速率限制错误."""
 
-    def __init__(self, message: str = "GitHub API 速率限制", reset_at: int | None = None, details: dict | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "GitHub API 速率限制",
+        reset_at: int | None = None,
+        details: dict | None = None,
+    ) -> None:
         super().__init__(message, status_code=429, details=details)
         self.error_code = "GITHUB_RATE_LIMIT"
         self.reset_at = reset_at
@@ -175,7 +180,12 @@ class LLMConnectionError(AIReviewError):
 class LLMRateLimitError(AIReviewError):
     """LLM 速率限制错误."""
 
-    def __init__(self, message: str = "LLM API 速率限制", model: str | None = None, details: dict | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "LLM API 速率限制",
+        model: str | None = None,
+        details: dict | None = None,
+    ) -> None:
         super().__init__(message, model=model, details=details)
         self.error_code = "LLM_RATE_LIMIT"
 
@@ -183,7 +193,13 @@ class LLMRateLimitError(AIReviewError):
 class LLMTimeoutError(AIReviewError):
     """LLM 超时错误."""
 
-    def __init__(self, message: str = "LLM 请求超时", model: str | None = None, timeout: int | None = None, details: dict | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "LLM 请求超时",
+        model: str | None = None,
+        timeout: int | None = None,
+        details: dict | None = None,
+    ) -> None:
         super().__init__(message, model=model, details=details)
         self.error_code = "LLM_TIMEOUT"
         self.timeout = timeout
@@ -224,7 +240,12 @@ class GitNexusConnectionError(GitNexusError):
 class GitNexusTimeoutError(GitNexusError):
     """GitNexus 超时错误."""
 
-    def __init__(self, message: str = "GitNexus 请求超时", timeout: int | None = None, details: dict | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "GitNexus 请求超时",
+        timeout: int | None = None,
+        details: dict | None = None,
+    ) -> None:
         super().__init__(message, details=details)
         self.error_code = "GITNEXUS_TIMEOUT"
         self.timeout = timeout
@@ -259,6 +280,11 @@ class NetworkError(GitConsistencyError):
 class TimeoutError(GitConsistencyError):
     """超时错误."""
 
-    def __init__(self, message: str = "请求超时", timeout: int | None = None, details: dict | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "请求超时",
+        timeout: int | None = None,
+        details: dict | None = None,
+    ) -> None:
         super().__init__(message, error_code="TIMEOUT_ERROR", details=details)
         self.timeout = timeout
