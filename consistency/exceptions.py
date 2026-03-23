@@ -1,6 +1,6 @@
 """GitConsistency 异常层次结构.
 
-提供结构化的异常分类，便于错误处理和可观测性。
+提供结构化的异常分类; 便于错误处理和可观测性。
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import Any
 class GitConsistencyError(Exception):
     """GitConsistency 基础异常.
 
-    所有自定义异常的基类，包含错误码和详细信息。
+    所有自定义异常的基类; 包含错误码和详细信息。
     """
 
     def __init__(
@@ -24,7 +24,7 @@ class GitConsistencyError(Exception):
 
         Args:
             message: 错误信息
-            error_code: 错误码，用于程序识别
+            error_code: 错误码; 用于程序识别
             details: 详细错误信息
         """
         super().__init__(message)
@@ -33,6 +33,7 @@ class GitConsistencyError(Exception):
         self.details = details or {}
 
     def __str__(self) -> str:
+        """返回异常的字符串表示."""
         if self.details:
             return f"[{self.error_code}] {self.message} - {self.details}"
         return f"[{self.error_code}] {self.message}"
@@ -179,7 +180,12 @@ class LLMConnectionError(AIReviewError):
     无法连接到 LLM API 时抛出。
     """
 
-    def __init__(self, message: str = "LLM 连接失败", model: str | None = None, details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "LLM 连接失败",
+        model: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(message, model=model, details=details)
         self.error_code = "LLM_CONNECTION_ERROR"
 
