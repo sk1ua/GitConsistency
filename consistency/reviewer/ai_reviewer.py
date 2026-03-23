@@ -144,8 +144,9 @@ class AIReviewer:
         # 获取 GitNexus 上下文增强
         context_enhancer = ContextEnhancer()
         try:
+            primary_file = Path(context.files_changed[0]) if context.files_changed else Path(".")
             gitnexus_context = await context_enhancer.enhance(
-                file_path=context.file_path or Path("."),
+                file_path=primary_file,
                 code=context.diff or "",
             )
         except Exception as e:

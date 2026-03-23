@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -47,26 +48,27 @@ Returns:
             扫描结果
         """
         try:
-            path = Path(file_path)
+            source_path = Path(file_path)
+            suffix = source_path.suffix or ".py"
 
-            # 运行 Semgrep
-            semgrep_results = await self.scanner._run_semgrep_on_code(code, path)
+            # 将代码写入临时目录并复用标准扫描流程，避免依赖不存在的私有方法
+            with tempfile.TemporaryDirectory() as tmpdir:
+                temp_file = Path(tmpdir) / f"snippet{suffix}"
+                temp_file.write_text(code, encoding="utf-8")
 
-            # 运行 Bandit
-            bandit_results = await self.scanner._run_bandit_on_code(code, path)
-
-            all_findings = semgrep_results + bandit_results
+                scan_result = await self.scanner.scan(temp_file)
+                all_findings = scan_result.findings
 
             return {
                 "file": file_path,
                 "findings_count": len(all_findings),
                 "findings": [
                     {
-                        "rule_id": f.get("rule_id", "unknown"),
-                        "message": f.get("message", ""),
-                        "severity": f.get("severity", "MEDIUM"),
-                        "line": f.get("line", 0),
-                        "file": f.get("file_path", file_path),
+                        "rule_id": f.rule_id,
+                        "message": f.message,
+                        "severity": f.severity.value.upper(),
+                        "line": f.line,
+                        "file": str(f.file_path) if f.file_path else file_path,
                     }
                     for f in all_findings[:10]  # 限制数量
                 ],

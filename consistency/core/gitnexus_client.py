@@ -243,7 +243,10 @@ class GitNexusClient:
                 cmd.extend(["--repo", str(repo_path)])
 
             result = await self._run_command(cmd)
-            return json.loads(result)
+            parsed = json.loads(result)
+            if isinstance(parsed, dict):
+                return parsed
+            return None
 
         except (GitNexusError, json.JSONDecodeError) as e:
             logger.warning(f"影响分析失败 {symbol}: {e}")

@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from rich.console import Console
 from rich.panel import Panel
@@ -76,13 +76,13 @@ class ReviewCommand:
         if self._gitnexus is None:
             try:
                 client = GitNexusClient()
-                if await client.ensure_available():
+                if client.is_available():
                     self._gitnexus = client
                 else:
-                    console.print("[yellow]⚠ GitNexus 不可用，将不使用代码知识图谱[/yellow]")
+                    console.print("[yellow]! GitNexus 不可用，将不使用代码知识图谱[/yellow]")
             except Exception as e:
                 logger.warning(f"GitNexus 初始化失败: {e}")
-                console.print("[yellow]⚠ GitNexus 初始化失败，将不使用代码知识图谱[/yellow]")
+                console.print("[yellow]! GitNexus 初始化失败，将不使用代码知识图谱[/yellow]")
 
         return self._gitnexus
 
@@ -103,17 +103,17 @@ class ReviewCommand:
         file_path = Path(file_path)
 
         if not file_path.exists():
-            console.print(f"[red]✗ 文件不存在: {file_path}[/red]")
+            console.print(f"[red][ERR] 文件不存在: {file_path}[/red]")
             return {"success": False, "error": "文件不存在"}
 
         try:
             code = file_path.read_text(encoding="utf-8")
         except Exception as e:
-            console.print(f"[red]✗ 读取文件失败: {e}[/red]")
+            console.print(f"[red][ERR] 读取文件失败: {e}[/red]")
             return {"success": False, "error": str(e)}
 
         mode_text = "快速模式" if self.quick_mode else "完整模式"
-        console.print(f"[blue]🔍 正在审查 {file_path.name} ({mode_text})...[/blue]")
+        console.print(f"[blue][SCAN] 正在审查 {file_path.name} ({mode_text})...[/blue]")
 
         # 确保 GitNexus 已初始化
         await self._get_gitnexus()
@@ -129,7 +129,7 @@ class ReviewCommand:
             try:
                 result = await self.supervisor.review(file_path, code)
             except Exception as e:
-                console.print(f"[red]✗ 审查失败: {e}[/red]")
+                console.print(f"[red][ERR] 审查失败: {e}[/red]")
                 return {"success": False, "error": str(e)}
 
         # 显示结果
@@ -140,7 +140,7 @@ class ReviewCommand:
             "file": str(file_path),
             "summary": result.summary,
             "comments_count": len(result.comments),
-            "severity": result.overall_severity.value,
+            "severity": result.severity.value,
         }
 
     async def review_diff(
@@ -162,7 +162,7 @@ class ReviewCommand:
         repo_path = Path(repo_path)
 
         if not (repo_path / ".git").exists():
-            console.print(f"[red]✗ 不是 Git 仓库: {repo_path}[/red]")
+            console.print(f"[red][ERR] 不是 Git 仓库: {repo_path}[/red]")
             return {"success": False, "error": "不是 Git 仓库"}
 
         # 构建 git diff 命令
@@ -186,15 +186,15 @@ class ReviewCommand:
             )
             diff_text = result.stdout
         except Exception as e:
-            console.print(f"[red]✗ 获取 diff 失败: {e}[/red]")
+            console.print(f"[red][ERR] 获取 diff 失败: {e}[/red]")
             return {"success": False, "error": str(e)}
 
         if not diff_text.strip():
-            console.print("[yellow]⚠ 没有检测到变更[/yellow]")
+            console.print("[yellow]! 没有检测到变更[/yellow]")
             return {"success": True, "summary": "没有检测到变更"}
 
         mode_text = "快速模式" if self.quick_mode else "完整模式"
-        console.print(f"[blue]🔍 正在审查变更 ({mode_text})...[/blue]")
+        console.print(f"[blue][SCAN] 正在审查变更 ({mode_text})...[/blue]")
 
         with Progress(
             SpinnerColumn(),
@@ -222,7 +222,7 @@ class ReviewCommand:
 
     async def review_batch(
         self,
-        files: list[Path | str],
+        files: Sequence[Path | str],
     ) -> dict[str, Any]:
         """批量审查文件.
 
@@ -233,10 +233,10 @@ class ReviewCommand:
             审查结果字典
         """
         if not files:
-            console.print("[yellow]⚠ 没有指定文件[/yellow]")
+            console.print("[yellow]! 没有指定文件[/yellow]")
             return {"success": True, "summary": "没有指定文件"}
 
-        console.print(f"[blue]🔍 正在审查 {len(files)} 个文件...[/blue]")
+        console.print(f"[blue][SCAN] 正在审查 {len(files)} 个文件...[/blue]")
 
         # 准备任务
         tasks = []
@@ -250,10 +250,10 @@ class ReviewCommand:
                     tasks.append((path, code))
                     valid_files.append(path)
                 except Exception as e:
-                    console.print(f"[yellow]⚠ 跳过 {path}: {e}[/yellow]")
+                    console.print(f"[yellow]! 跳过 {path}: {e}[/yellow]")
 
         if not tasks:
-            console.print("[yellow]⚠ 没有可审查的文件[/yellow]")
+            console.print("[yellow]! 没有可审查的文件[/yellow]")
             return {"success": True, "summary": "没有可审查的文件"}
 
         # 执行批量审查
@@ -298,7 +298,7 @@ class ReviewCommand:
             "MEDIUM": "yellow",
             "LOW": "blue",
             "INFO": "green",
-        }.get(result.overall_severity.value, "white")
+        }.get(result.severity.value, "white")
 
         console.print(
             Panel(
@@ -334,7 +334,7 @@ class ReviewCommand:
 
             console.print(table)
         else:
-            console.print("[green]✓ 未发现明显问题[/green]")
+            console.print("[green][OK] 未发现明显问题[/green]")
 
         # 显示代码（如果请求）
         if code and result.comments:
@@ -376,14 +376,14 @@ class ReviewCommand:
             file_summary = f"{changes['path']} (+{changes['added_lines']}/-{changes['removed_lines']})"
 
             if review.comments:
-                sev = review.overall_severity.value
+                sev = review.severity.value
                 color = {
                     "CRITICAL": "red",
                     "HIGH": "red",
                     "MEDIUM": "yellow",
                 }.get(sev, "green")
 
-                console.print(f"\n[{color}]● {file_summary}[/{color}]")
+                console.print(f"\n[{color}]* {file_summary}[/{color}]")
 
                 for c in review.comments[:3]:  # 最多显示 3 个
                     sev_color = {
@@ -395,7 +395,7 @@ class ReviewCommand:
 
                     console.print(f"  [{sev_color}]{c.severity.value}[/{sev_color}] {c.message}")
             else:
-                console.print(f"[green]✓ {file_summary}[/green]")
+                console.print(f"[green][OK] {file_summary}[/green]")
 
     def _display_batch_summary(
         self,
@@ -406,7 +406,7 @@ class ReviewCommand:
     ) -> None:
         """显示批量审查汇总."""
         # 汇总面板
-        status = "✓ 通过" if critical_count == 0 else "✗ 发现问题"
+        status = "[OK] 通过" if critical_count == 0 else "[ERR] 发现问题"
         color = "green" if critical_count == 0 else "red"
 
         summary = f"""
@@ -433,7 +433,7 @@ class ReviewCommand:
 
             for f, r in zip(files, results):
                 if r.comments:
-                    sev = r.overall_severity.value
+                    sev = r.severity.value
                     table.add_row(
                         f.name,
                         str(len(r.comments)),

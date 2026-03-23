@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import pickle
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
@@ -28,12 +28,16 @@ class CacheEntry(Generic[T]):
 
     def __init__(self, data: T, ttl: int) -> None:
         self.data = data
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(UTC)
         self.ttl = ttl
 
     @property
     def is_expired(self) -> bool:
-        return datetime.utcnow() - self.created_at >= timedelta(seconds=self.ttl)
+        created_at = self.created_at
+        if created_at.tzinfo is None:
+            # 兼容历史缓存中的 naive datetime
+            created_at = created_at.replace(tzinfo=UTC)
+        return datetime.now(UTC) - created_at >= timedelta(seconds=self.ttl)
 
 
 class GitNexusCache:
@@ -78,8 +82,8 @@ class GitNexusCache:
         if not path.exists():
             return False
 
-        mtime = datetime.fromtimestamp(path.stat().st_mtime)
-        return datetime.utcnow() - mtime < timedelta(seconds=ttl)
+        mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        return datetime.now(UTC) - mtime < timedelta(seconds=ttl)
 
     def get(self, key: str, default: T | None = None) -> T | None:
         """获取缓存值.
