@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from consistency.agents.base import AgentResult, Severity
 from consistency.agents.logic_agent import LogicAgent
@@ -90,11 +90,11 @@ class ReviewSupervisor:
         agent_results = await asyncio.gather(*agent_tasks, return_exceptions=True)
 
         # 2. 过滤成功的结果
-        successful_results = []
+        successful_results: list[AgentResult] = []
         for i, result in enumerate(agent_results):
             agent_name = list(self.agents.keys())[i]
 
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 logger.error(f"{agent_name} 失败: {result}")
                 # 创建失败的占位结果
                 successful_results.append(
@@ -163,7 +163,7 @@ class ReviewSupervisor:
         try:
             result = await agent.analyze(file_path, code)
             logger.debug(f"{name} 完成: {len(result.comments)} 条发现")
-            return result
+            return cast(AgentResult, result)
 
         except Exception as e:
             logger.exception(f"{name} 异常: {e}")

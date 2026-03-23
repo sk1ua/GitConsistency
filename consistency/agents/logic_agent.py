@@ -44,7 +44,7 @@ class LogicAgent(BaseAgent):
     async def analyze(self, file_path: Path, code: str) -> AgentResult:
         """执行逻辑分析."""
         start_time = time.perf_counter()
-        findings = []
+        findings: list[dict[str, Any]] = []
 
         # 1. AST 分析
         try:
@@ -200,7 +200,7 @@ class LogicAgent(BaseAgent):
         code: str,
     ) -> list[dict[str, Any]]:
         """使用 GitNexus 分析调用链."""
-        findings = []
+        findings: list[dict[str, Any]] = []
 
         # 提取函数定义
         try:
@@ -245,7 +245,7 @@ class LogicAgent(BaseAgent):
 
     def _convert_to_comments(
         self,
-        findings: list[dict],
+        findings: list[dict[str, Any]],
         file_path: Path,
     ) -> list[ReviewComment]:
         """转换为 comments."""
@@ -256,19 +256,26 @@ class LogicAgent(BaseAgent):
             "LOW": Severity.LOW,
         }
 
-        return [
-            ReviewComment(
-                file=str(file_path),
-                line=f.get("line", 0),
-                message=f.get("message", ""),
-                severity=severity_map.get(f.get("severity", "MEDIUM").upper(), Severity.MEDIUM),
-                category=CommentCategory.BUG,
-                rule_id=f"logic-{f.get('type', 'unknown')}",
+        comments: list[ReviewComment] = []
+        for finding in findings:
+            line_value = finding.get("line")
+            line = line_value if isinstance(line_value, int) and line_value > 0 else None
+            message = str(finding.get("message", ""))
+            severity_raw = str(finding.get("severity", "MEDIUM")).upper()
+            comments.append(
+                ReviewComment(
+                    file=str(file_path),
+                    line=line,
+                    message=message,
+                    suggestion=None,
+                    severity=severity_map.get(severity_raw, Severity.MEDIUM),
+                    category=CommentCategory.BUG,
+                    confidence=0.8,
+                )
             )
-            for f in findings
-        ]
+        return comments
 
-    def _determine_severity(self, findings: list[dict]) -> Severity:
+    def _determine_severity(self, findings: list[dict[str, Any]]) -> Severity:
         """确定总体严重程度."""
         if not findings:
             return Severity.LOW
@@ -282,12 +289,12 @@ class LogicAgent(BaseAgent):
         has_medium = any(f.get("severity") == "MEDIUM" for f in findings)
         return Severity.MEDIUM if has_medium else Severity.LOW
 
-    def _generate_summary(self, findings: list[dict]) -> str:
+    def _generate_summary(self, findings: list[dict[str, Any]]) -> str:
         """生成摘要."""
         if not findings:
             return "未检测到逻辑问题"
 
-        types = {}
+        types: dict[str, int] = {}
         for f in findings:
             t = f.get("type", "unknown")
             types[t] = types.get(t, 0) + 1
@@ -295,7 +302,7 @@ class LogicAgent(BaseAgent):
         parts = [f"{count} 个{k}" for k, count in types.items()]
         return f"逻辑分析发现: {', '.join(parts)}"
 
-    def _generate_action_items(self, findings: list[dict]) -> list[str]:
+    def _generate_action_items(self, findings: list[dict[str, Any]]) -> list[str]:
         """生成修复建议."""
         items = []
 

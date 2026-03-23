@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class Severity(str, Enum):
     """严重程度."""
 
+    INFO = "info"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -107,7 +108,7 @@ class ReviewResult(BaseModel):
     def validate_comments(cls, v: list[ReviewComment]) -> list[ReviewComment]:
         """验证评论列表."""
         # 按严重程度排序
-        severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
         return sorted(v, key=lambda x: severity_order.get(x.severity.value, 4))
 
     @property

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -58,26 +59,35 @@ class SecurityAgent(BaseAgent):
             审查结果
         """
         start_time = time.perf_counter()
-        all_findings = []
-        metadata = {"sources": []}
+        all_findings: list[dict[str, Any]] = []
+        metadata: dict[str, Any] = {"sources": []}
 
-        # 1. 运行 Semgrep
+        # 1. 使用标准扫描流程（Semgrep + Bandit）
         try:
-            semgrep_results = await self.scanner._run_semgrep_on_code(code, file_path)
-            all_findings.extend(semgrep_results)
-            metadata["sources"].append("semgrep")
-        except Exception as e:
-            logger.warning(f"Semgrep 扫描失败: {e}")
+            with tempfile.TemporaryDirectory() as tmpdir:
+                temp_file = Path(tmpdir) / (file_path.name or "snippet.py")
+                temp_file.write_text(code, encoding="utf-8")
 
-        # 2. 运行 Bandit
-        try:
-            bandit_results = await self.scanner._run_bandit_on_code(code, file_path)
-            all_findings.extend(bandit_results)
-            metadata["sources"].append("bandit")
-        except Exception as e:
-            logger.warning(f"Bandit 扫描失败: {e}")
+                scan_result = await self.scanner.scan(temp_file)
+                for finding in scan_result.findings:
+                    all_findings.append(
+                        {
+                            "rule_id": finding.rule_id,
+                            "message": finding.message,
+                            "severity": finding.severity.value.upper(),
+                            "file_path": file_path,
+                            "line": finding.line,
+                            "source": scan_result.scanner_name,
+                        }
+                    )
 
-        # 3. GitNexus 增强（如果有）
+                metadata["sources"].append(scan_result.scanner_name)
+                if scan_result.errors:
+                    metadata["scan_errors"] = scan_result.errors
+        except Exception as e:
+            logger.warning(f"安全扫描失败: {e}")
+
+        # 2. GitNexus 增强（如果有）
         if self.use_gitnexus:
             try:
                 gitnexus_findings = await self._analyze_with_gitnexus(file_path, code)
@@ -86,13 +96,13 @@ class SecurityAgent(BaseAgent):
             except Exception as e:
                 logger.warning(f"GitNexus 分析失败: {e}")
 
-        # 4. 转换为 comments
+        # 3. 转换为 comments
         comments = self._convert_to_comments(all_findings)
 
-        # 5. 确定严重程度
+        # 4. 确定严重程度
         severity = self._determine_severity(all_findings)
 
-        # 6. 生成摘要
+        # 5. 生成摘要
         summary = self._generate_summary(all_findings)
 
         duration = (time.perf_counter() - start_time) * 1000
@@ -150,9 +160,9 @@ class SecurityAgent(BaseAgent):
 
         return findings
 
-    def _convert_to_comments(self, findings: list[dict]) -> list[ReviewComment]:
+    def _convert_to_comments(self, findings: list[dict[str, Any]]) -> list[ReviewComment]:
         """将发现转换为 ReviewComment."""
-        comments = []
+        comments: list[ReviewComment] = []
 
         for finding in findings:
             severity_map = {
@@ -162,22 +172,27 @@ class SecurityAgent(BaseAgent):
                 "LOW": Severity.LOW,
             }
 
+            line_value = finding.get("line")
+            line = line_value if isinstance(line_value, int) and line_value > 0 else None
+            message = str(finding.get("message", ""))
+            severity_raw = str(finding.get("severity", "MEDIUM")).upper()
             comment = ReviewComment(
                 file=str(finding.get("file_path", "")),
-                line=finding.get("line", 0),
-                message=finding.get("message", ""),
+                line=line,
+                message=message,
+                suggestion=None,
                 severity=severity_map.get(
-                    finding.get("severity", "MEDIUM").upper(),
+                    severity_raw,
                     Severity.MEDIUM,
                 ),
                 category=CommentCategory.SECURITY,
-                rule_id=finding.get("rule_id", "unknown"),
+                confidence=0.8,
             )
             comments.append(comment)
 
         return comments
 
-    def _determine_severity(self, findings: list[dict]) -> Severity:
+    def _determine_severity(self, findings: list[dict[str, Any]]) -> Severity:
         """确定总体严重程度."""
         if not findings:
             return Severity.LOW
@@ -194,7 +209,7 @@ class SecurityAgent(BaseAgent):
 
         return worst
 
-    def _generate_summary(self, findings: list[dict]) -> str:
+    def _generate_summary(self, findings: list[dict[str, Any]]) -> str:
         """生成摘要."""
         if not findings:
             return "未检测到安全问题"
@@ -216,7 +231,7 @@ class SecurityAgent(BaseAgent):
 
         return f"安全扫描发现: {', '.join(parts)} 问题"
 
-    def _generate_action_items(self, findings: list[dict]) -> list[str]:
+    def _generate_action_items(self, findings: list[dict[str, Any]]) -> list[str]:
         """生成修复建议."""
         items = []
 

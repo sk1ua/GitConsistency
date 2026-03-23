@@ -9,7 +9,7 @@ import ast
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
 
@@ -24,6 +24,23 @@ class SymbolInfo:
     type: str  # function, class, method
     line: int
     context: str | None = None
+
+
+class ContextNode(TypedDict):
+    """单个调用节点信息."""
+
+    name: str
+    file: str
+    line: int
+
+
+class SymbolContext(TypedDict):
+    """单个符号的上下文信息."""
+
+    name: str
+    type: str
+    callers: list[ContextNode]
+    callees: list[ContextNode]
 
 
 class ContextEnhancer:
@@ -105,7 +122,7 @@ class ContextEnhancer:
         Returns:
             符号列表
         """
-        symbols = []
+        symbols: list[SymbolInfo] = []
 
         try:
             tree = ast.parse(code)
@@ -157,9 +174,9 @@ class ContextEnhancer:
         self,
         symbol: SymbolInfo,
         ctx: Any,  # GitNexusContext
-    ) -> dict[str, Any] | None:
+    ) -> SymbolContext | None:
         """格式化符号上下文."""
-        result = {
+        result: SymbolContext = {
             "name": symbol.name,
             "type": symbol.type,
             "callers": [],
@@ -188,7 +205,7 @@ class ContextEnhancer:
 
         return result
 
-    def _build_enhanced_prompt(self, contexts: list[dict[str, Any]]) -> str:
+    def _build_enhanced_prompt(self, contexts: list[SymbolContext]) -> str:
         """构建增强的 Prompt 上下文.
 
         Args:
@@ -197,7 +214,7 @@ class ContextEnhancer:
         Returns:
             格式化的上下文字符串
         """
-        lines = [
+        lines: list[str] = [
             "",
             "## 代码上下文（来自知识图谱）",
             "",
