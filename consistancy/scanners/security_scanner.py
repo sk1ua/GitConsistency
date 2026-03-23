@@ -83,7 +83,8 @@ class SecurityScanner(BaseScanner):
         """
         super().__init__(config)
         self.semgrep_config = SemgrepConfig(
-            rules=semgrep_rules or [
+            rules=semgrep_rules
+            or [
                 "p/security-audit",
                 "p/owasp-top-ten",
                 "p/cwe-top-25",
@@ -117,16 +118,16 @@ class SecurityScanner(BaseScanner):
 
         # 并行运行两个扫描器
         semgrep_task = asyncio.create_task(
-            self._run_semgrep(path), name="semgrep_scan",
+            self._run_semgrep(path),
+            name="semgrep_scan",
         )
         bandit_task = asyncio.create_task(
-            self._run_bandit(path), name="bandit_scan",
+            self._run_bandit(path),
+            name="bandit_scan",
         )
 
         # 收集结果
-        findings, scanned_files, errors = await self._collect_scan_results(
-            semgrep_task, bandit_task
-        )
+        findings, scanned_files, errors = await self._collect_scan_results(semgrep_task, bandit_task)
 
         # 后处理
         unique_findings = await self._post_process_findings(findings)
@@ -184,8 +185,10 @@ class SecurityScanner(BaseScanner):
             "semgrep",
             "--json",
             "--quiet",
-            "--max-memory", str(self.semgrep_config.max_memory),
-            "--timeout", str(self.semgrep_config.timeout),
+            "--max-memory",
+            str(self.semgrep_config.max_memory),
+            "--timeout",
+            str(self.semgrep_config.timeout),
         ]
 
         # 添加规则
@@ -200,9 +203,7 @@ class SecurityScanner(BaseScanner):
         cmd.append(str(resolved_path))
         return cmd
 
-    def _parse_semgrep_results(
-        self, result: dict[str, Any]
-    ) -> tuple[list[Finding], int]:
+    def _parse_semgrep_results(self, result: dict[str, Any]) -> tuple[list[Finding], int]:
         """解析 Semgrep JSON 结果."""
         findings: list[Finding] = []
 
@@ -290,10 +291,7 @@ class SecurityScanner(BaseScanner):
                 line=match.get("start", {}).get("line", 0),
                 column=match.get("start", {}).get("col", 0),
                 code_snippet=extra.get("lines", "").strip(),
-                confidence=(
-                    0.9 if extra.get("metadata", {}).get("confidence", "MEDIUM").lower() == "high"
-                    else 0.7
-                ),
+                confidence=(0.9 if extra.get("metadata", {}).get("confidence", "MEDIUM").lower() == "high" else 0.7),
                 metadata={
                     "source": "semgrep",
                     "cwe": metadata.get("cwe", []),
@@ -313,7 +311,8 @@ class SecurityScanner(BaseScanner):
 
         cmd = [
             "bandit",
-            "-f", "json",
+            "-f",
+            "json",
             "-ll",
             "-ii",
         ]
@@ -330,9 +329,7 @@ class SecurityScanner(BaseScanner):
         cmd.extend(["-r", str(resolved_path)])
         return cmd
 
-    def _parse_bandit_results(
-        self, result: dict[str, Any]
-    ) -> tuple[list[Finding], int]:
+    def _parse_bandit_results(self, result: dict[str, Any]) -> tuple[list[Finding], int]:
         """解析 Bandit JSON 结果."""
         findings = []
         for issue in result.get("results", []):

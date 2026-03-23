@@ -68,8 +68,8 @@ class GitNexusResponseError(GitNexusError):
 class TransportType(Enum):
     """MCP 传输类型."""
 
-    SSE = auto()      # Server-Sent Events
-    STDIO = auto()    # 标准输入输出
+    SSE = auto()  # Server-Sent Events
+    STDIO = auto()  # 标准输入输出
 
 
 @dataclass

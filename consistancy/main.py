@@ -44,12 +44,13 @@ app.add_typer(config_app, name="config")
 def version_callback(value: bool) -> None:
     """显示版本信息并退出."""
     if value:
-        console.print(Panel.fit(
-            f"[bold blue]ConsistenCy[/bold blue] [green]v{__version__}[/green]\n"
-            "[dim]代码安全扫描与 AI 审查[/dim]",
-            title="版本信息",
-            border_style="blue",
-        ))
+        console.print(
+            Panel.fit(
+                f"[bold blue]ConsistenCy[/bold blue] [green]v{__version__}[/green]\n[dim]代码安全扫描与 AI 审查[/dim]",
+                title="版本信息",
+                border_style="blue",
+            )
+        )
         raise typer.Exit()
 
 
@@ -74,7 +75,8 @@ def main(
     version: Annotated[
         bool | None,
         typer.Option(
-            "--version", "-v",
+            "--version",
+            "-v",
             callback=version_callback,
             is_eager=True,
             help="显示版本信息",
@@ -83,7 +85,8 @@ def main(
     debug: Annotated[
         bool,
         typer.Option(
-            "--debug", "-d",
+            "--debug",
+            "-d",
             help="启用调试模式",
         ),
     ] = False,
@@ -113,14 +116,16 @@ def analyze_command(
     output: Annotated[
         Path | None,
         typer.Option(
-            "--output", "-o",
+            "--output",
+            "-o",
             help="输出文件路径",
         ),
     ] = None,
     format: Annotated[
         str,
         typer.Option(
-            "--format", "-f",
+            "--format",
+            "-f",
             help="输出格式 (markdown, json, html)",
         ),
     ] = "markdown",
@@ -152,22 +157,26 @@ def analyze_command(
 
     settings = get_settings()
 
-    console.print(Panel.fit(
-        f"[bold]分析目标:[/bold] {path.absolute()}\n"
-        f"[bold]输出格式:[/bold] {format}\n"
-        f"[dim]安全扫描: {'✓' if not skip_security else '✗'} | "
-        f"AI 审查: {'✓' if not skip_ai else '✗'}[/dim]",
-        title="📋 分析配置",
-        border_style="green",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold]分析目标:[/bold] {path.absolute()}\n"
+            f"[bold]输出格式:[/bold] {format}\n"
+            f"[dim]安全扫描: {'✓' if not skip_security else '✗'} | "
+            f"AI 审查: {'✓' if not skip_ai else '✗'}[/dim]",
+            title="📋 分析配置",
+            border_style="green",
+        )
+    )
 
     try:
-        result = asyncio.run(_run_analysis(
-            path=path,
-            skip_security=skip_security,
-            skip_ai=skip_ai,
-            settings=settings,
-        ))
+        result = asyncio.run(
+            _run_analysis(
+                path=path,
+                skip_security=skip_security,
+                skip_ai=skip_ai,
+                settings=settings,
+            )
+        )
 
         generator = ReportGenerator()
         format_map = {
@@ -200,6 +209,7 @@ def analyze_command(
         console.print(f"\n[red]✗ 分析失败: {e}[/red]")
         if settings.debug:
             import traceback
+
             console.print(traceback.format_exc())
         raise typer.Exit(1)
 
@@ -237,10 +247,7 @@ async def _run_analysis(
             context = ReviewContext(
                 diff="",
                 files_changed=[str(f.file_path) for f in all_findings if f.file_path],
-                security_findings=[
-                    {"severity": f.severity.value, "message": f.message}
-                    for f in all_findings[:20]
-                ],
+                security_findings=[{"severity": f.severity.value, "message": f.message} for f in all_findings[:20]],
             )
 
             ai_review = await reviewer.review(context)
@@ -289,7 +296,8 @@ def ci_command(
     event: Annotated[
         str,
         typer.Option(
-            "--event", "-e",
+            "--event",
+            "-e",
             help="CI 事件类型",
         ),
     ] = "pull_request",
@@ -341,22 +349,26 @@ def ci_command(
         console.print("[red]✗[/red] 无法获取仓库或 PR 信息")
         raise typer.Exit(1)
 
-    console.print(Panel.fit(
-        f"[bold]仓库:[/bold] {repo}\n"
-        f"[bold]PR:[/bold] #{actual_pr_number}\n"
-        f"[bold]事件:[/bold] {event}\n"
-        f"[bold]干运行:[/bold] {'是' if dry_run else '否'}",
-        title="🔧 CI 模式",
-        border_style="blue",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold]仓库:[/bold] {repo}\n"
+            f"[bold]PR:[/bold] #{actual_pr_number}\n"
+            f"[bold]事件:[/bold] {event}\n"
+            f"[bold]干运行:[/bold] {'是' if dry_run else '否'}",
+            title="🔧 CI 模式",
+            border_style="blue",
+        )
+    )
 
     try:
-        result = asyncio.run(_run_analysis(
-            path=Path("."),
-            skip_security=False,
-            skip_ai=skip_ai,
-            settings=get_settings(),
-        ))
+        result = asyncio.run(
+            _run_analysis(
+                path=Path("."),
+                skip_security=False,
+                skip_ai=skip_ai,
+                settings=get_settings(),
+            )
+        )
 
         generator = ReportGenerator()
         comment = generator.generate_github_comment(
@@ -392,7 +404,8 @@ def scan_security(
     rules: Annotated[
         list[str] | None,
         typer.Option(
-            "--rules", "-r",
+            "--rules",
+            "-r",
             help="Semgrep 规则",
         ),
     ] = None,

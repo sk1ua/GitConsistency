@@ -183,10 +183,7 @@ class GitNexusCache:
         memory_size = len(self.memory_cache)
         file_size = len(list(self.file_cache_dir.glob("*.cache")))
 
-        total_file_size = sum(
-            f.stat().st_size
-            for f in self.file_cache_dir.glob("*.cache")
-        )
+        total_file_size = sum(f.stat().st_size for f in self.file_cache_dir.glob("*.cache"))
 
         return {
             "memory_entries": memory_size,

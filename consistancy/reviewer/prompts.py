@@ -13,11 +13,11 @@ from typing import Any
 class ReviewType(Enum):
     """审查类型."""
 
-    GENERAL = auto()      # 通用代码审查
-    SECURITY = auto()     # 安全焦点审查
+    GENERAL = auto()  # 通用代码审查
+    SECURITY = auto()  # 安全焦点审查
     CONSISTENCY = auto()  # 一致性检查
     PERFORMANCE = auto()  # 性能审查
-    DOCS = auto()         # 文档审查
+    DOCS = auto()  # 文档审查
 
 
 @dataclass
@@ -288,6 +288,7 @@ class PromptCache:
         """生成缓存键."""
         # 基于 diff 哈希和类型
         import hashlib
+
         content = f"{context.diff[:1000]}:{review_type.name}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
@@ -311,7 +312,7 @@ class PromptCache:
 
         if len(self._cache) >= self._max_size:
             # 简单的 LRU：清空一半
-            self._cache = dict(list(self._cache.items())[self._max_size // 2:])
+            self._cache = dict(list(self._cache.items())[self._max_size // 2 :])
 
         self._cache[key] = messages
 

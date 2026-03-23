@@ -97,9 +97,7 @@ class GitHubIntegration:
         try:
             from github import Github  # noqa: F401
         except ImportError:
-            raise ImportError(
-                "PyGithub 未安装，请运行: pip install pygithub"
-            )
+            raise ImportError("PyGithub 未安装，请运行: pip install pygithub")
 
         self._semaphore = asyncio.Semaphore(self.max_concurrent)
 
@@ -184,7 +182,7 @@ class GitHubIntegration:
 
                 # 截断如果太长
                 if len(full_body) > self.MAX_COMMENT_LENGTH:
-                    full_body = full_body[:self.MAX_COMMENT_LENGTH - 100]
+                    full_body = full_body[: self.MAX_COMMENT_LENGTH - 100]
                     full_body += "\n\n... (评论过长已截断)"
                     full_body += f"\n\n{self.comment_signature}"
 
@@ -282,9 +280,7 @@ class GitHubIntegration:
         async def post_single(comment: PRComment) -> dict[str, Any]:
             async with semaphore:
                 if comment.path and comment.line:
-                    return await self.post_file_comment(
-                        repo, pr_number, comment.path, comment.line, comment.body
-                    )
+                    return await self.post_file_comment(repo, pr_number, comment.path, comment.line, comment.body)
                 else:
                     return await self.post_comment(repo, pr_number, comment.body)
 
@@ -496,6 +492,7 @@ class GitHubIntegration:
         if event_name == "pull_request" and info["event_path"]:
             try:
                 import json
+
                 with open(info["event_path"]) as f:
                     event_data = json.load(f)
                 info["pr_number"] = event_data.get("pull_request", {}).get("number")

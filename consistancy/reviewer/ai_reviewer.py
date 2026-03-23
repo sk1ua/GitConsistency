@@ -107,9 +107,7 @@ class AIReviewer:
         try:
             import litellm  # noqa: F401
         except ImportError:
-            raise ImportError(
-                "LiteLLM 未安装，请运行: pip install litellm"
-            )
+            raise ImportError("LiteLLM 未安装，请运行: pip install litellm")
 
     async def review(
         self,
@@ -329,12 +327,12 @@ class AIReviewer:
         import re
 
         # 匹配 ```json ... ```
-        match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+        match = re.search(r"```(?:json)?\s*(.*?)\s*```", content, re.DOTALL)
         if match:
             return match.group(1)
 
         # 尝试找到 {...}
-        match = re.search(r'(\{.*\})', content, re.DOTALL)
+        match = re.search(r"(\{.*\})", content, re.DOTALL)
         if match:
             return match.group(1)
 
@@ -348,13 +346,32 @@ class AIReviewer:
         import re
 
         # 查找 "Line X:" 或 "File Y:" 模式
-        file_pattern = r'(?:[Ff]ile|[Ff]ile path):?\s*[`\']?(\S+)[`\']?'
-        line_pattern = r'(?:[Ll]ine|[Ll]n):?\s*(\d+)'
+        file_pattern = r"(?:[Ff]ile|[Ff]ile path):?\s*[`\']?(\S+)[`\']?"
+        line_pattern = r"(?:[Ll]ine|[Ll]n):?\s*(\d+)"
 
-        lines = content.split('\n')
+        lines = content.split("\n")
         current_file: str | None = None
         current_line: int | None = None
         current_message: list[str] = []
+
+        def _save_comment() -> None:
+            """保存当前评论（如果消息不为空）."""
+            nonlocal current_message
+            if current_message:
+                msg = " ".join(current_message).strip()
+                if msg:  # 确保消息不为空
+                    comments.append(
+                        ReviewComment(
+                            file=current_file,
+                            line=current_line,
+                            message=msg,
+                            suggestion=None,
+                            severity=Severity.MEDIUM,
+                            category=CommentCategory.OTHER,
+                            confidence=0.8,
+                        )
+                    )
+                current_message = []
 
         for line in lines:
             # 检查是否是新文件/行
@@ -362,18 +379,7 @@ class AIReviewer:
             line_match = re.search(line_pattern, line)
 
             if file_match or line_match:
-                # 保存之前的评论
-                if current_message:
-                    comments.append(ReviewComment(
-                        file=current_file,
-                        line=current_line,
-                        message=' '.join(current_message).strip(),
-                        suggestion=None,
-                        severity=Severity.MEDIUM,
-                        category=CommentCategory.OTHER,
-                        confidence=0.8,
-                    ))
-                    current_message = []
+                _save_comment()
 
                 if file_match:
                     current_file = file_match.group(1)
@@ -383,16 +389,7 @@ class AIReviewer:
                 current_message.append(line)
 
         # 保存最后一个评论
-        if current_message:
-            comments.append(ReviewComment(
-                file=current_file,
-                line=current_line,
-                message=' '.join(current_message).strip(),
-                suggestion=None,
-                severity=Severity.MEDIUM,
-                category=CommentCategory.OTHER,
-                confidence=0.8,
-            ))
+        _save_comment()
 
         return ReviewResult(
             summary=content[:500] + "..." if len(content) > 500 else content,

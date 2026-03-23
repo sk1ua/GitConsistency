@@ -52,42 +52,24 @@ class Settings(BaseSettings):
         default="anthropic/claude-3-haiku-20240307",
         description="备选模型",
     )
-    litellm_temperature: float = Field(
-        default=0.3, ge=0.0, le=1.0, description="采样温度"
-    )
-    litellm_max_tokens: int = Field(
-        default=4096, ge=1, le=128000, description="最大生成 token 数"
-    )
+    litellm_temperature: float = Field(default=0.3, ge=0.0, le=1.0, description="采样温度")
+    litellm_max_tokens: int = Field(default=4096, ge=1, le=128000, description="最大生成 token 数")
     litellm_timeout: int = Field(default=60, ge=1, description="请求超时（秒）")
 
     # =============================================================================
     # GitHub 配置
     # =============================================================================
-    github_token: str | None = Field(
-        default=None, description="GitHub Personal Access Token"
-    )
-    github_delete_old_comments: bool = Field(
-        default=True, description="是否删除旧评论"
-    )
-    github_comment_signature: str = Field(
-        default="<!-- ConsistenCy 2.0 Code Review -->", description="PR 评论签名"
-    )
+    github_token: str | None = Field(default=None, description="GitHub Personal Access Token")
+    github_delete_old_comments: bool = Field(default=True, description="是否删除旧评论")
+    github_comment_signature: str = Field(default="<!-- ConsistenCy 2.0 Code Review -->", description="PR 评论签名")
 
     # =============================================================================
     # GitNexus MCP 配置
     # =============================================================================
-    gitnexus_mcp_url: str | None = Field(
-        default=None, description="GitNexus MCP SSE 端点 URL"
-    )
-    gitnexus_mcp_command: str | None = Field(
-        default=None, description="GitNexus MCP 命令（stdio 模式）"
-    )
-    gitnexus_mcp_args: list[str] = Field(
-        default_factory=list, description="GitNexus MCP 命令参数"
-    )
-    gitnexus_cache_dir: Path = Field(
-        default=Path(".cache/gitnexus"), description="GitNexus 缓存目录"
-    )
+    gitnexus_mcp_url: str | None = Field(default=None, description="GitNexus MCP SSE 端点 URL")
+    gitnexus_mcp_command: str | None = Field(default=None, description="GitNexus MCP 命令（stdio 模式）")
+    gitnexus_mcp_args: list[str] = Field(default_factory=list, description="GitNexus MCP 命令参数")
+    gitnexus_cache_dir: Path = Field(default=Path(".cache/gitnexus"), description="GitNexus 缓存目录")
     gitnexus_cache_ttl: int = Field(default=3600, ge=0, description="缓存 TTL（秒）")
 
     # =============================================================================
@@ -97,25 +79,19 @@ class Settings(BaseSettings):
         default_factory=lambda: ["p/security-audit", "p/owasp-top-ten", "p/cwe-top-25"],
         description="Semgrep 规则集",
     )
-    bandit_severity: Literal["LOW", "MEDIUM", "HIGH"] = Field(
-        default="LOW", description="Bandit 最低严重级别"
-    )
+    bandit_severity: Literal["LOW", "MEDIUM", "HIGH"] = Field(default="LOW", description="Bandit 最低严重级别")
 
     # =============================================================================
     # 缓存配置
     # =============================================================================
     cache_dir: Path = Field(default=Path(".cache"), description="全局缓存目录")
-    cache_max_size: int = Field(
-        default=1000, ge=100, description="缓存最大大小（MB）"
-    )
+    cache_max_size: int = Field(default=1000, ge=100, description="缓存最大大小（MB）")
     enable_memory_cache: bool = Field(default=True, description="是否启用内存缓存")
 
     # =============================================================================
     # 日志配置
     # =============================================================================
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO", description="日志级别"
-    )
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO", description="日志级别")
     log_format: str = Field(
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         description="日志格式",
@@ -124,9 +100,7 @@ class Settings(BaseSettings):
     # =============================================================================
     # 性能配置
     # =============================================================================
-    worker_threads: int = Field(
-        default=0, ge=0, description="工作线程数（0=自动）"
-    )
+    worker_threads: int = Field(default=0, ge=0, description="工作线程数（0=自动）")
 
     # =============================================================================
     # 字段验证器

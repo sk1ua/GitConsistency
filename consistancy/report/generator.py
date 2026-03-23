@@ -226,9 +226,7 @@ class ReportGenerator:
             "project_name": project_name,
             "summary": {
                 "total_issues": len(all_findings),
-                "severity_counts": {
-                    k.value: v for k, v in severity_counts.items()
-                },
+                "severity_counts": {k.value: v for k, v in severity_counts.items()},
                 "duration_ms": kwargs.get("duration_ms", 0),
             },
             "scanners": [
@@ -312,10 +310,9 @@ class ReportGenerator:
         ]
 
         # 添加关键问题
-        critical_and_high = [
-            f for f in all_findings
-            if f.severity in (Severity.CRITICAL, Severity.HIGH)
-        ][:10]  # 最多显示 10 个
+        critical_and_high = [f for f in all_findings if f.severity in (Severity.CRITICAL, Severity.HIGH)][
+            :10
+        ]  # 最多显示 10 个
 
         if critical_and_high:
             lines.append("### 🚨 Critical Issues")
@@ -345,7 +342,7 @@ class ReportGenerator:
 
         # 截断如果超过限制
         if len(comment) > max_length:
-            comment = comment[:max_length - 100] + "\n\n... (truncated)"
+            comment = comment[: max_length - 100] + "\n\n... (truncated)"
 
         return comment
 
@@ -402,10 +399,7 @@ class ReportGenerator:
                 "problems. Review recommended before merging."
             )
         elif total > 0:
-            return (
-                f"✅ Found **{total}** minor issues. Consider addressing them for "
-                "code quality improvement."
-            )
+            return f"✅ Found **{total}** minor issues. Consider addressing them for code quality improvement."
         else:
             return "🎉 No issues found! Code looks great."
 
@@ -507,11 +501,12 @@ class ReportGenerator:
 
         # 移除 JSON 代码块标记
         import re
-        text = re.sub(r'```json\s*', '', text)
-        text = re.sub(r'```\s*', '', text)
+
+        text = re.sub(r"```json\s*", "", text)
+        text = re.sub(r"```\s*", "", text)
 
         # 将多行合并为单行（用于 summary 等简短文本）
-        lines = text.split('\n')
+        lines = text.split("\n")
         lines = [line.strip() for line in lines if line.strip()]
 
         # 如果是单行，直接返回
@@ -519,18 +514,18 @@ class ReportGenerator:
             return lines[0] if lines else ""
 
         # 如果是多行，检查是否看起来像 JSON
-        joined = ' '.join(lines)
-        if joined.startswith('{') and joined.endswith('}'):
+        joined = " ".join(lines)
+        if joined.startswith("{") and joined.endswith("}"):
             # 尝试提取其中的 summary 字段
             try:
                 data = json.loads(joined)
-                if isinstance(data, dict) and 'summary' in data:
-                    return str(data['summary'])
+                if isinstance(data, dict) and "summary" in data:
+                    return str(data["summary"])
             except json.JSONDecodeError:
                 pass
 
         # 返回前3行，用空格连接（避免 Markdown 格式混乱）
-        return ' '.join(lines[:3])
+        return " ".join(lines[:3])
 
     def _generate_html_scanner_table(self, result: ScanResult) -> str:
         """生成 HTML 扫描器表格."""
