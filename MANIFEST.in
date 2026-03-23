@@ -2,6 +2,6 @@ include README.md
 include LICENSE
 include CONTRIBUTING.md
 include .env.example
-recursive-include consistancy *.py
+recursive-include consistency *.py
 recursive-include tests *.py
 recursive-include .github *.yml

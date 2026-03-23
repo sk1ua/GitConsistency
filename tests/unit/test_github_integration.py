@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consistancy.github_integration import GitHubIntegration, PRComment, PRInfo
+from consistency.github_integration import GitHubIntegration, PRComment, PRInfo
 
 
 class TestGitHubIntegrationInit:
@@ -13,7 +13,7 @@ class TestGitHubIntegrationInit:
 
     def test_default_init(self) -> None:
         """测试默认初始化."""
-        with patch("consistancy.github_integration.get_settings") as mock_settings:
+        with patch("consistency.github_integration.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(github_token="test-token")
             
             github = GitHubIntegration()
@@ -34,10 +34,10 @@ class TestGitHubIntegrationInit:
 
     def test_no_token_warning(self) -> None:
         """测试无 token 时警告."""
-        with patch("consistancy.github_integration.get_settings") as mock_settings:
+        with patch("consistency.github_integration.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(github_token=None)
             
-            with patch("consistancy.github_integration.logger") as mock_logger:
+            with patch("consistency.github_integration.logger") as mock_logger:
                 GitHubIntegration()
                 mock_logger.warning.assert_called_once()
 
@@ -98,7 +98,7 @@ class TestPostComment:
             await github.post_comment("owner/repo", 1, "Body")
 
             call_args = mock_pr.create_issue_comment.call_args[0][0]
-            assert "ConsistenCy 2.0" in call_args
+            assert "GitConsistency" in call_args
 
     @pytest.mark.asyncio
     async def test_post_comment_truncation(self, github: GitHubIntegration) -> None:
@@ -136,7 +136,7 @@ class TestDeletePreviousComments:
 
         # 创建 mock 评论
         mock_comment1 = MagicMock()
-        mock_comment1.body = "Test\n<!-- ConsistenCy 2.0 Code Review -->"
+        mock_comment1.body = "Test\n<!-- GitConsistency Code Review -->"
         mock_comment1.id = 1
 
         mock_comment2 = MagicMock()

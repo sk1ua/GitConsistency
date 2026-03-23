@@ -1,1 +1,1 @@
-"""ConsistenCy 测试包."""
+"""GitConsistency 测试包."""

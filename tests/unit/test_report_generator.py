@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consistancy.report.generator import ReportGenerator
-from consistancy.report.templates import ReportFormat, ReportTheme
-from consistancy.reviewer.models import CommentCategory, ReviewComment, ReviewResult, Severity
-from consistancy.scanners.base import Finding, ScanResult
+from consistency.report.generator import ReportGenerator
+from consistency.report.templates import ReportFormat, ReportTheme
+from consistency.reviewer.models import CommentCategory, ReviewComment, ReviewResult
+from consistency.scanners.base import Finding, ScanResult, Severity
 
 
 class TestReportGeneratorInit:
@@ -18,7 +18,7 @@ class TestReportGeneratorInit:
         """测试默认初始化."""
         generator = ReportGenerator()
         assert generator.theme is not None
-        assert generator.version == "2.0.0"
+        assert generator.version == "0.1.0"
 
     def test_custom_init(self) -> None:
         """测试自定义初始化."""
@@ -59,7 +59,7 @@ class TestGenerateMarkdown:
             project_name="Test Project",
         )
 
-        assert "# 🔍 ConsistenCy Code Health Report" in report
+        assert "# 🔍 GitConsistency Code Health Report" in report
         assert "Test Project" in report
         assert "RULE-1" in report
         assert "Test security issue" in report
@@ -133,7 +133,7 @@ class TestGenerateJSON:
 
         report = generator.generate_json([result], project_name="Test")
 
-        assert report["version"] == "2.0.0"
+        assert report["version"] == "0.1.0"
         assert report["project_name"] == "Test"
         assert report["summary"]["total_issues"] == 1
         assert len(report["scanners"]) == 1
@@ -192,7 +192,7 @@ class TestGenerateHTML:
 
         assert "<!DOCTYPE html>" in report
         assert "<html" in report
-        assert "ConsistenCy Code Health Report" in report
+        assert "GitConsistency Code Health Report" in report
         assert "Test" in report
 
     def test_generate_html_contains_styling(self) -> None:
@@ -223,7 +223,7 @@ class TestGenerateGitHubComment:
 
         comment = generator.generate_github_comment([result], project_name="Test")
 
-        assert "ConsistenCy Code Review" in comment
+        assert "GitConsistency Code Review" in comment
         assert "Test" in comment
         assert "🔴 Issues: 1" in comment
         assert "🟡 Warnings: 1" in comment
@@ -252,11 +252,11 @@ class TestHelperMethods:
         generator = ReportGenerator()
         results = [
             ScanResult(scanner_name="s1", findings=[
-                Finding(rule_id="R1", message="M1"),
+                Finding(rule_id="R1", message="M1", severity=Severity.LOW),
             ]),
             ScanResult(scanner_name="s2", findings=[
-                Finding(rule_id="R2", message="M2"),
-                Finding(rule_id="R3", message="M3"),
+                Finding(rule_id="R2", message="M2", severity=Severity.MEDIUM),
+                Finding(rule_id="R3", message="M3", severity=Severity.HIGH),
             ]),
         ]
 

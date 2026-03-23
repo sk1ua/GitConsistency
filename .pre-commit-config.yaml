@@ -1,4 +1,4 @@
-# ConsistenCy 2.0 - Pre-commit 配置
+# GitConsistency - Pre-commit 配置
 # 安装: pre-commit install
 # 运行所有检查: pre-commit run --all-files
 
@@ -61,7 +61,7 @@ repos:
     rev: 1.7.6
     hooks:
       - id: bandit
-        args: [-c, pyproject.toml, -r, consistancy/]
+        args: [-c, pyproject.toml, -r, consistency/]
         additional_dependencies: ["bandit[toml]"]
         stages: [pre-commit]
 
@@ -80,13 +80,13 @@ repos:
         args: [--write-changes, --skip="*.lock,*.json"]
         stages: [pre-commit]
 
-  # ==================== ConsistenCy 自身 ====================
-  # 本地 hooks，在开发 ConsistenCy 自身时启用
+  # ==================== GitConsistency 自身 ====================
+  # 本地 hooks，在开发 GitConsistency 自身时启用
   - repo: local
     hooks:
-      - id: consistancy-check
-        name: ConsistenCy Code Health Check
-        entry: python -m consistancy.main analyze
+      - id: consistency-check
+        name: GitConsistency Code Health Check
+        entry: python -m consistency.main analyze
         language: system
         pass_filenames: false
         always_run: true

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from consistancy.core.cache import CacheEntry, GitNexusCache
+from consistency.core.cache import CacheEntry, GitNexusCache
 
 
 class TestCacheEntry:

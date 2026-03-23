@@ -1,6 +1,6 @@
 """Prompt 模板单元测试."""
 
-from consistancy.reviewer.prompts import (
+from consistency.reviewer.prompts import (
     PromptCache,
     PromptTemplate,
     ReviewContext,

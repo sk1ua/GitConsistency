@@ -88,7 +88,7 @@
 
 配置完成后，可以手动触发工作流测试：
 
-1. 打开仓库 → **Actions** → **ConsistenCy Code Review**
+1. 打开仓库 → **Actions** → **GitConsistency Code Review**
 2. 点击 **Run workflow**
 3. 选择分支
 4. 点击 **Run workflow**

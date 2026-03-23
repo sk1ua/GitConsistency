@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from consistancy.config import Settings, get_settings, reload_settings
+from consistency.config import Settings, get_settings, reload_settings
 
 
 class TestSettings:
@@ -15,8 +15,8 @@ class TestSettings:
     def test_default_values(self) -> None:
         """测试默认值."""
         settings = Settings()
-        assert settings.project_name == "ConsistenCy"
-        assert settings.version == "2.0.0"
+        assert settings.project_name == "GitConsistency"
+        assert settings.version == "0.1.0"
         assert settings.litellm_temperature == 0.3
 
     def test_litellm_model_default(self) -> None:
@@ -117,7 +117,7 @@ class TestEnvironmentVariables:
     def test_env_file_loading(self, tmp_path: Path) -> None:
         """测试从 .env 文件加载."""
         env_file = tmp_path / ".env"
-        env_file.write_text("CONSISTANCY_LITELLM_MODEL=test-model\nCONSISTANCY_LOG_LEVEL=DEBUG")
+        env_file.write_text("CONSISTENCY_LITELLM_MODEL=test-model\nCONSISTENCY_LOG_LEVEL=DEBUG")
 
         settings = Settings(_env_file=str(env_file))
         assert settings.litellm_model == "test-model"
@@ -125,8 +125,8 @@ class TestEnvironmentVariables:
 
     def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """测试环境变量覆盖."""
-        monkeypatch.setenv("CONSISTANCY_LITELLM_MODEL", "env-model")
-        monkeypatch.setenv("CONSISTANCY_LOG_LEVEL", "ERROR")
+        monkeypatch.setenv("CONSISTENCY_LITELLM_MODEL", "env-model")
+        monkeypatch.setenv("CONSISTENCY_LOG_LEVEL", "ERROR")
 
         reload_settings()
         settings = get_settings()
@@ -135,6 +135,6 @@ class TestEnvironmentVariables:
         assert settings.log_level == "ERROR"
 
         # 清理
-        monkeypatch.delenv("CONSISTANCY_LITELLM_MODEL", raising=False)
-        monkeypatch.delenv("CONSISTANCY_LOG_LEVEL", raising=False)
+        monkeypatch.delenv("CONSISTENCY_LITELLM_MODEL", raising=False)
+        monkeypatch.delenv("CONSISTENCY_LOG_LEVEL", raising=False)
         reload_settings()

@@ -54,7 +54,7 @@ def insecure_function(password):
     @pytest.mark.asyncio
     async def test_scanner_orchestrator(self, sample_project: Path) -> None:
         """测试扫描器协调器."""
-        from consistancy.scanners.orchestrator import ScannerOrchestrator
+        from consistency.scanners.orchestrator import ScannerOrchestrator
 
         orchestrator = ScannerOrchestrator()
         orchestrator.create_default_scanners()
@@ -68,9 +68,9 @@ def insecure_function(password):
     @pytest.mark.asyncio
     async def test_report_generation(self, sample_project: Path) -> None:
         """测试报告生成."""
-        from consistancy.scanners.orchestrator import ScannerOrchestrator
-        from consistancy.report.generator import ReportGenerator
-        from consistancy.report.templates import ReportFormat
+        from consistency.scanners.orchestrator import ScannerOrchestrator
+        from consistency.report.generator import ReportGenerator
+        from consistency.report.templates import ReportFormat
 
         # 运行扫描
         orchestrator = ScannerOrchestrator()
@@ -86,7 +86,7 @@ def insecure_function(password):
             format=ReportFormat.MARKDOWN,
         )
         assert isinstance(md_report, str)
-        assert "ConsistenCy" in md_report
+        assert "GitConsistency" in md_report
 
         # JSON
         json_report = generator.generate(
@@ -98,7 +98,7 @@ def insecure_function(password):
 
     def test_github_integration_init(self) -> None:
         """测试 GitHub 集成初始化."""
-        from consistancy.github_integration import GitHubIntegration
+        from consistency.github_integration import GitHubIntegration
 
         # 无 token 时应警告但不报错
         github = GitHubIntegration(token=None)
@@ -106,12 +106,12 @@ def insecure_function(password):
 
     def test_config_loading(self) -> None:
         """测试配置加载."""
-        from consistancy.config import get_settings
+        from consistency.config import get_settings
 
         settings = get_settings()
 
         assert settings is not None
-        assert settings.project_name == "ConsistenCy"
+        assert settings.project_name == "GitConsistency"
 
 
 class TestCLIE2E:
@@ -120,29 +120,29 @@ class TestCLIE2E:
     def test_cli_help(self) -> None:
         """测试 CLI 帮助."""
         from typer.testing import CliRunner
-        from consistancy.main import app
+        from consistency.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
-        assert "ConsistenCy" in result.output
+        assert "GitConsistency" in result.output
 
     def test_cli_version(self) -> None:
         """测试 CLI 版本."""
         from typer.testing import CliRunner
-        from consistancy.main import app
+        from consistency.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["--version"])
 
         assert result.exit_code == 0
-        assert "2.0.0" in result.output
+        assert "0.1.0" in result.output
 
     def test_cli_config_validate(self) -> None:
         """测试配置验证命令."""
         from typer.testing import CliRunner
-        from consistancy.main import app
+        from consistency.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["config", "validate"])

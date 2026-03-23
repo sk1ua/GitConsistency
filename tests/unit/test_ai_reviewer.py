@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from consistancy.reviewer.ai_reviewer import AIReviewer, ReviewCache
-from consistancy.reviewer.models import CommentCategory, ReviewComment, ReviewResult, Severity
-from consistancy.reviewer.prompts import ReviewContext, ReviewType
+from consistency.reviewer.ai_reviewer import AIReviewer, ReviewCache
+from consistency.reviewer.models import CommentCategory, ReviewComment, ReviewResult, Severity
+from consistency.reviewer.prompts import ReviewContext, ReviewType
 
 
 class TestAIReviewerInit:
@@ -17,7 +17,7 @@ class TestAIReviewerInit:
 
     def test_default_init(self) -> None:
         """测试默认初始化."""
-        with patch("consistancy.reviewer.ai_reviewer.get_settings") as mock_settings:
+        with patch("consistency.reviewer.ai_reviewer.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(
                 litellm_model="deepseek/deepseek-chat",
                 litellm_fallback_model="anthropic/claude-3-haiku",
@@ -45,13 +45,13 @@ class TestAIReviewerInit:
 
     def test_validate_setup_no_api_key(self) -> None:
         """测试无 API 键时警告."""
-        with patch("consistancy.reviewer.ai_reviewer.get_settings") as mock_settings:
+        with patch("consistency.reviewer.ai_reviewer.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(
                 litellm_model="test",
                 litellm_api_key=None,
             )
             
-            with patch("consistancy.reviewer.ai_reviewer.logger") as mock_logger:
+            with patch("consistency.reviewer.ai_reviewer.logger") as mock_logger:
                 AIReviewer()
                 mock_logger.warning.assert_called_once()
 

@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from consistancy.scanners.base import Finding, ScanResult, Severity
-from consistancy.scanners.orchestrator import ScannerOrchestrator, ScanReport
+from consistency.scanners.base import Finding, ScanResult, Severity
+from consistency.scanners.orchestrator import ScannerOrchestrator, ScanReport
 
 
 class TestScanReport:

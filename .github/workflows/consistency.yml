@@ -1,7 +1,7 @@
-# ConsistenCy 2.0 - GitHub Actions 工作流
+# GitConsistency - GitHub Actions 工作流
 # 自动在 PR 上运行代码健康检查并发布评论
 
-name: 🔍 ConsistenCy Code Review
+name: 🔍 GitConsistency Code Review
 
 on:
   pull_request:
@@ -94,12 +94,12 @@ jobs:
           enable-cache: false
 
       # -----------------------------------------------------------------------
-      # 安装 ConsistenCy
+      # 安装 GitConsistency
       # -----------------------------------------------------------------------
-      - name: Install ConsistenCy
+      - name: Install GitConsistency
         run: |
           uv venv
-          uv pip install -e "." --python .venv/bin/python
+          uv pip install -e ".[full]" --python .venv/bin/python
 
       # -----------------------------------------------------------------------
       # 缓存模型和数据
@@ -110,15 +110,15 @@ jobs:
           path: |
             .cache/
             ~/.cache/
-          key: ${{ runner.os }}-consistancy-${{ hashFiles('**/pyproject.toml') }}
+          key: ${{ runner.os }}-gitconsistency-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-consistancy-
+            ${{ runner.os }}-gitconsistency-
 
       # -----------------------------------------------------------------------
-      # 运行 ConsistenCy 分析
+      # 运行 GitConsistency 分析
       # -----------------------------------------------------------------------
-      - name: Run ConsistenCy Analysis
-        id: consistancy
+      - name: Run GitConsistency Analysis
+        id: gitconsistency
         env:
           # GitHub 集成（必需）
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -150,13 +150,13 @@ jobs:
           fi
           
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-            uv run consistancy ci \
+            uv run gitconsistency ci \
               --event pull_request \
               --pr "$GITHUB_PR_NUMBER" \
               $SKIP_AI \
               $DRY_RUN_FLAG
           else
-            uv run consistancy analyze "$PROJECT_PATH" \
+            uv run gitconsistency analyze "$PROJECT_PATH" \
               $SKIP_AI \
               --format markdown \
               --output report.md
@@ -169,10 +169,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: consistancy-report-${{ github.run_id }}
+          name: gitconsistency-report-${{ github.run_id }}
           path: |
             report.md
-            .cache/consistancy/
+            .cache/gitconsistency/
             data/
           retention-days: 7
           if-no-files-found: ignore
@@ -184,7 +184,7 @@ jobs:
         if: github.event_name == 'push' && always()
         uses: actions/upload-artifact@v4
         with:
-          name: consistancy-summary
+          name: gitconsistency-summary
           path: report.md
           retention-days: 30
 
@@ -216,15 +216,15 @@ jobs:
       - name: Ruff check
         run: |
           # Only check critical errors (E, F, W), ignore style/doc issues
-          uv run ruff check consistancy/ --select E,W,F
+          uv run ruff check consistency/ --select E,W,F
 
       - name: Ruff format check
         run: |
-          uv run ruff format --check consistancy/
+          uv run ruff format --check consistency/
 
       - name: MyPy type check
         run: |
-          uv run mypy consistancy/
+          uv run mypy consistency/
 
   # ===========================================================================
   # 测试
@@ -255,16 +255,16 @@ jobs:
           uv venv
           uv pip install -e ".[dev]" --python .venv/bin/python
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          uv run pytest tests/ -v --ignore=tests/integration -x
+          uv run pytest tests/ -v --ignore=tests/integration --cov=consistency --cov-report=xml --cov-fail-under=70
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: matrix.python-version == '3.12'
         with:
           files: ./coverage.xml
-          fail_ci_if_error: true
+          fail_ci_if_error: false  # 不阻塞构建，仅报告
 
   # ===========================================================================
   # 构建和发布（仅 main 分支）
@@ -297,7 +297,7 @@ jobs:
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: consistancy-package
+          name: gitconsistency-package
           path: dist/
           retention-days: 7
 
@@ -311,13 +311,13 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     environment:
       name: pypi
-      url: https://pypi.org/p/consistancy
+      url: https://pypi.org/p/gitconsistency
     
     steps:
       - name: Download package
         uses: actions/download-artifact@v4
         with:
-          name: consistancy-package
+          name: gitconsistency-package
           path: dist/
 
       - name: Publish to PyPI

@@ -9,13 +9,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from consistancy.core.gitnexus_client import (
+from consistency.core.gitnexus_client import (
     GitNexusClient,
-    GitNexusConnectionError,
     GitNexusError,
-    TransportType,
+    GitNexusContext,
+    GitNexusQueryResult,
 )
-from consistancy.core.schema import ContextResult, ImpactResult, KnowledgeGraph
+from consistency.core.schema import ContextResult, ImpactResult, KnowledgeGraph
 
 
 class TestGitNexusClientInit:
@@ -92,9 +92,12 @@ class TestGitNexusClientAnalyze:
     """analyze 方法测试."""
 
     @pytest.fixture
-    def client(self) -> GitNexusClient:
-        """创建测试客户端."""
-        return GitNexusClient(mcp_url="http://localhost:3000")
+    def client(self, tmp_path) -> GitNexusClient:
+        """创建测试客户端，使用临时缓存目录."""
+        return GitNexusClient(
+            mcp_url="http://localhost:3000",
+            cache_dir=tmp_path / "cache"
+        )
 
     @pytest.mark.asyncio
     async def test_analyze_success(self, client: GitNexusClient) -> None:
@@ -156,8 +159,11 @@ class TestGitNexusClientContext:
     """context 方法测试."""
 
     @pytest.fixture
-    def client(self) -> GitNexusClient:
-        return GitNexusClient(mcp_url="http://localhost:3000")
+    def client(self, tmp_path) -> GitNexusClient:
+        return GitNexusClient(
+            mcp_url="http://localhost:3000",
+            cache_dir=tmp_path / "cache"
+        )
 
     @pytest.mark.asyncio
     async def test_context_basic(self, client: GitNexusClient) -> None:
@@ -209,8 +215,11 @@ class TestGitNexusClientImpact:
     """impact 方法测试."""
 
     @pytest.fixture
-    def client(self) -> GitNexusClient:
-        return GitNexusClient(mcp_url="http://localhost:3000")
+    def client(self, tmp_path) -> GitNexusClient:
+        return GitNexusClient(
+            mcp_url="http://localhost:3000",
+            cache_dir=tmp_path / "cache"
+        )
 
     @pytest.mark.asyncio
     async def test_impact_success(self, client: GitNexusClient) -> None:
@@ -250,8 +259,11 @@ class TestGitNexusClientQuery:
     """query 方法测试."""
 
     @pytest.fixture
-    def client(self) -> GitNexusClient:
-        return GitNexusClient(mcp_url="http://localhost:3000")
+    def client(self, tmp_path) -> GitNexusClient:
+        return GitNexusClient(
+            mcp_url="http://localhost:3000",
+            cache_dir=tmp_path / "cache"
+        )
 
     @pytest.mark.asyncio
     async def test_query_success(self, client: GitNexusClient) -> None:
@@ -291,8 +303,11 @@ class TestGitNexusClientDetectChanges:
     """detect_changes 方法测试."""
 
     @pytest.fixture
-    def client(self) -> GitNexusClient:
-        return GitNexusClient(mcp_url="http://localhost:3000")
+    def client(self, tmp_path) -> GitNexusClient:
+        return GitNexusClient(
+            mcp_url="http://localhost:3000",
+            cache_dir=tmp_path / "cache"
+        )
 
     @pytest.mark.asyncio
     async def test_detect_changes_success(self, client: GitNexusClient) -> None:

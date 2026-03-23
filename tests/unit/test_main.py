@@ -2,7 +2,7 @@
 
 from typer.testing import CliRunner
 
-from consistancy.main import app
+from consistency.main import app
 
 runner = CliRunner()
 
@@ -14,13 +14,13 @@ class TestCLI:
         """测试帮助信息."""
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "ConsistenCy 2.0" in result.output
+        assert "GitConsistency" in result.output
 
     def test_version(self) -> None:
         """测试版本信息."""
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
-        assert "2.0.0" in result.output
+        assert "0.1.0" in result.output
 
     def test_analyze_help(self) -> None:
         """测试 analyze 命令帮助."""

@@ -1,17 +1,17 @@
-# ConsistenCy 2.0 - Docker Compose 配置
+# GitConsistency - Docker Compose 配置
 # 支持：本地开发、CI/CD
 
 version: "3.8"
 
 services:
   # ==================== 核心 CLI 服务 ====================
-  consistancy:
+  gitconsistency:
     build:
       context: .
       dockerfile: Dockerfile
       target: production
-    image: consistancy:latest
-    container_name: consistancy-cli
+    image: gitconsistency:latest
+    container_name: gitconsistency-cli
     env_file:
       - .env
     volumes:
@@ -21,11 +21,11 @@ services:
         target: /repo
         read_only: true
       # 缓存目录
-      - consistancy-cache:/app/.cache
+      - gitconsistency-cache:/app/.cache
     working_dir: /repo
     command: ["analyze", "/repo", "--format", "markdown"]
     networks:
-      - consistancy-net
+      - gitconsistency-net
 
   # ==================== 开发环境 ====================
   dev:
@@ -33,19 +33,19 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    image: consistancy:dev
-    container_name: consistancy-dev
+    image: gitconsistency:dev
+    container_name: gitconsistency-dev
     env_file:
       - .env
     volumes:
       - .:/app
-      - consistancy-cache:/app/.cache
+      - gitconsistency-cache:/app/.cache
       - /app/.venv  # 匿名卷，避免覆盖虚拟环境
     stdin_open: true
     tty: true
     command: ["bash"]
     networks:
-      - consistancy-net
+      - gitconsistency-net
 
   # ==================== 测试运行器 ====================
   test:
@@ -53,14 +53,14 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    image: consistancy:dev
-    container_name: consistancy-test
+    image: gitconsistency:dev
+    container_name: gitconsistency-test
     volumes:
       - .:/app
-      - consistancy-cache:/app/.cache
-    command: ["pytest", "-v", "--cov=consistancy", "--cov-report=term-missing"]
+      - gitconsistency-cache:/app/.cache
+    command: ["pytest", "-v", "--cov=consistency", "--cov-report=term-missing"]
     networks:
-      - consistancy-net
+      - gitconsistency-net
     profiles:
       - testing  # 只在显式指定时运行
 
@@ -70,8 +70,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    image: consistancy:latest
-    container_name: consistancy-gh-action
+    image: gitconsistency:latest
+    container_name: gitconsistency-gh-action
     env_file:
       - .env
     environment:
@@ -82,20 +82,20 @@ services:
         source: ${TARGET_REPO:-.}
         target: /github/workspace
         read_only: true
-      - consistancy-cache:/app/.cache
+      - gitconsistency-cache:/app/.cache
     working_dir: /github/workspace
     command: ["ci", "--event", "pull_request"]
     networks:
-      - consistancy-net
+      - gitconsistency-net
     profiles:
       - ci
 
 # ==================== 卷定义 ====================
 volumes:
-  consistancy-cache:
+  gitconsistency-cache:
     driver: local
 
 # ==================== 网络定义 ====================
 networks:
-  consistancy-net:
+  gitconsistency-net:
     driver: bridge

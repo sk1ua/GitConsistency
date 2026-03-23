@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from consistancy.reviewer.models import (
+from consistency.reviewer.models import (
     CommentCategory,
     ReviewComment,
     ReviewResult,

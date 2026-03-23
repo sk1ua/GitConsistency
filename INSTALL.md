@@ -14,7 +14,13 @@
 ### 方式一：使用 pip 安装（推荐用户）
 
 ```bash
-pip install consistancy
+# 完整功能
+pip install "git-consistency[full]"
+
+# 按需安装
+pip install "git-consistency[security]"    # 仅安全扫描
+pip install "git-consistency[ai]"          # 包含 AI 审查
+pip install "git-consistency[github]"      # 包含 GitHub 集成
 ```
 
 ### 方式二：使用 uv 安装（推荐开发者）
@@ -24,7 +30,7 @@ pip install consistancy
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 使用 uv 安装
-uv pip install consistancy
+uv pip install "git-consistency[full]"
 ```
 
 ### 方式三：从源码安装
@@ -36,21 +42,18 @@ cd GitConsistency
 
 # 使用 uv 安装（推荐）
 uv venv
-uv pip install -e ".[dev]"
+uv pip install -e ".[full,dev]"
 
 # 或使用 pip
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e ".[full,dev]"
 ```
 
 ### 方式四：使用 Docker
 
 ```bash
-# 拉取镜像（如果有）
-docker pull consistancy/consistancy:latest
-
-# 或本地构建
+# 本地构建
 git clone https://github.com/sk1ua/GitConsistency.git
 cd GitConsistency
 docker-compose build
@@ -60,13 +63,13 @@ docker-compose build
 
 ```bash
 # 检查版本
-consistancy --version
+gitconsistency --version
 
 # 检查配置
-consistancy config validate
+gitconsistency config validate
 
 # 运行帮助
-consistancy --help
+gitconsistency --help
 ```
 
 ## 配置
@@ -75,7 +78,7 @@ consistancy --help
 
 ```bash
 cd your-project
-consistancy init
+gitconsistency init
 ```
 
 这将创建：
@@ -112,10 +115,10 @@ SEMGREP_RULES=p/security-audit p/owasp-top-ten
 
 ```bash
 # 使用 --user 安装
-pip install --user consistancy
+pip install --user "git-consistency[full]"
 
 # 或使用 uv（不需要 sudo）
-uv pip install consistancy
+uv pip install "git-consistency[full]"
 ```
 
 ### Q: Windows 上安装失败
@@ -125,7 +128,7 @@ uv pip install consistancy
 # 在 WSL2 Ubuntu 中
 sudo apt update
 sudo apt install python3.12 python3.12-venv python3.12-dev
-pip install consistancy
+pip install "git-consistency[full]"
 ```
 
 ### Q: Docker 构建失败
@@ -151,15 +154,14 @@ export PATH="$HOME/.local/bin:$PATH"
 ## 卸载
 
 ```bash
-pip uninstall consistancy
+pip uninstall git-consistency
 
 # 清理缓存
-rm -rf ~/.cache/consistancy
+rm -rf ~/.cache/gitconsistency
 rm -rf .cache/gitnexus
 ```
 
 ## 获取帮助
 
-- 📖 文档：https://docs.consistancy.dev
 - 🐛 Issues：https://github.com/sk1ua/GitConsistency/issues
 - 💬 Discussions：https://github.com/sk1ua/GitConsistency/discussions

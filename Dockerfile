@@ -1,4 +1,4 @@
-# ConsistenCy 2.0 - 代码安全扫描与 AI 审查
+# GitConsistency - 代码安全扫描与 AI 审查
 # 多阶段构建，优化镜像大小和安全性
 
 # ==================== 构建阶段 ====================
@@ -25,7 +25,7 @@ RUN uv venv /opt/venv && \
     uv pip install --no-cache -e "." --python /opt/venv/bin/python
 
 # 复制源代码
-COPY consistancy/ ./consistancy/
+COPY consistency/ ./consistency/
 
 # 安装项目本身
 RUN uv pip install --no-cache -e . --python /opt/venv/bin/python
@@ -34,7 +34,7 @@ RUN uv pip install --no-cache -e . --python /opt/venv/bin/python
 FROM python:3.12-slim-bookworm AS production
 
 # 安全：创建非 root 用户
-RUN groupadd -r consistancy && useradd -r -g consistancy consistancy
+RUN groupadd -r gitconsistency && useradd -r -g gitconsistency gitconsistency
 
 # 安装运行时依赖（semgrep 需要 git）
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -57,17 +57,17 @@ ENV PATH="/opt/venv/bin:$PATH" \
 WORKDIR /app
 
 # 创建缓存目录并设置权限
-RUN mkdir -p /app/.cache && chown -R consistancy:consistancy /app
+RUN mkdir -p /app/.cache && chown -R gitconsistency:gitconsistency /app
 
 # 切换到非 root 用户
-USER consistancy
+USER gitconsistency
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD consistancy --help || exit 1
+    CMD gitconsistency --help || exit 1
 
 # 默认命令
-ENTRYPOINT ["consistancy"]
+ENTRYPOINT ["gitconsistency"]
 CMD ["--help"]
 
 # ==================== 开发阶段 ====================

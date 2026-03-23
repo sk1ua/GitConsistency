@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢您对 ConsistenCy 的兴趣！本文档将帮助您参与项目开发。
+感谢您对 GitConsistency 的兴趣！本文档将帮助您参与项目开发。
 
 ## 开发环境设置
 
@@ -14,8 +14,8 @@
 
 ```bash
 # 1. Fork 并克隆仓库
-git clone https://github.com/YOUR_USERNAME/consistancy.git
-cd consistancy
+git clone https://github.com/YOUR_USERNAME/GitConsistency.git
+cd GitConsistency
 
 # 2. 创建虚拟环境并安装依赖
 uv venv
@@ -25,13 +25,13 @@ uv pip install -e ".[dev]"
 pre-commit install
 
 # 4. 验证安装
-consistancy --version
+gitconsistency --version
 ```
 
 ## 项目结构
 
 ```
-consistancy/
+gitconsistency/
 ├── core/           # GitNexus MCP 客户端
 ├── scanners/       # 扫描引擎
 ├── reviewer/       # AI 审查
@@ -56,7 +56,7 @@ ruff format .
 ruff check . --fix
 
 # 类型检查
-mypy consistancy/
+mypy consistency/  # 目录名保持不变
 ```
 
 ### 提交信息
@@ -95,7 +95,7 @@ pytest -v
 pytest tests/unit/ -v
 
 # 带覆盖率
-pytest -v --cov=consistancy --cov-report=html
+pytest -v --cov=consistency --cov-report=html
 
 # 并行测试
 pytest -v -n auto
@@ -123,7 +123,7 @@ pytest -v -n auto
 
 ```python
 # scanners/my_scanner.py
-from consistancy.scanners.base import BaseScanner, ScanResult
+from consistency.scanners.base import BaseScanner, ScanResult
 
 class MyScanner(BaseScanner):
     async def scan(self, path: Path) -> ScanResult:
@@ -140,7 +140,7 @@ class MyScanner(BaseScanner):
 
 请包含：
 - Python 版本
-- ConsistenCy 版本
+- GitConsistency 版本
 - 复现步骤
 - 预期行为 vs 实际行为
 - 错误日志
@@ -158,22 +158,21 @@ class MyScanner(BaseScanner):
 
 ```bash
 # 1. 更新版本号
-# 修改 __init__.py 和 pyproject.toml
+# 修改 pyproject.toml
 
 # 2. 更新 CHANGELOG.md
 
 # 3. 创建标签
-git tag -a v2.x.x -m "Release v2.x.x"
+git tag -a v0.x.x -m "Release v0.x.x"
 
 # 4. 推送标签
-git push origin v2.x.x
+git push origin v0.x.x
 
 # 5. GitHub Actions 自动发布到 PyPI
 ```
 
 ## 获取帮助
 
-- 📖 阅读 [文档](https://docs.consistancy.dev)
 - 💬 加入 [Discussions](https://github.com/sk1ua/GitConsistency/discussions)
 - 🐛 提交 [Issue](https://github.com/sk1ua/GitConsistency/issues)
 
