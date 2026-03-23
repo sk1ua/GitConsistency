@@ -114,6 +114,7 @@ class AIReviewer:
         context: ReviewContext | str,
         review_type: ReviewType = ReviewType.GENERAL,
         use_cache: bool = True,
+        raise_on_error: bool = False,
     ) -> ReviewResult:
         """执行 AI 代码审查.
 
@@ -121,6 +122,7 @@ class AIReviewer:
             context: 审查上下文（或 diff 字符串）
             review_type: 审查类型
             use_cache: 是否使用缓存
+            raise_on_error: 是否在错误时抛出异常（用于备选模型回退）
 
         Returns:
             结构化审查结果
@@ -160,6 +162,8 @@ class AIReviewer:
         except TimeoutError as e:
             self._stats["errors"] += 1
             logger.error(f"LLM 调用超时: {e}")
+            if raise_on_error:
+                raise
             return ReviewResult(
                 summary="审查超时，请稍后重试",
                 severity=Severity.LOW,
@@ -170,6 +174,8 @@ class AIReviewer:
         except ConnectionError as e:
             self._stats["errors"] += 1
             logger.error(f"网络连接错误: {e}")
+            if raise_on_error:
+                raise
             return ReviewResult(
                 summary="网络连接失败，请检查网络",
                 severity=Severity.LOW,
@@ -180,6 +186,8 @@ class AIReviewer:
         except Exception as e:
             self._stats["errors"] += 1
             logger.exception(f"审查失败（未预期错误）: {e}")
+            if raise_on_error:
+                raise
             # 返回错误结果
             return ReviewResult(
                 summary=f"审查失败: {e}",
@@ -231,7 +239,7 @@ class AIReviewer:
             审查结果
         """
         try:
-            return await self.review(context, review_type)
+            return await self.review(context, review_type, raise_on_error=True)
         except Exception as e:
             logger.warning(f"主模型失败，尝试备选模型: {e}")
 
@@ -239,7 +247,7 @@ class AIReviewer:
             original_model = self.model
             self.model = self.fallback_model
             try:
-                result = await self.review(context, review_type, use_cache=False)
+                result = await self.review(context, review_type, use_cache=False, raise_on_error=True)
                 result.metadata["used_fallback_model"] = True
                 return result
             finally:

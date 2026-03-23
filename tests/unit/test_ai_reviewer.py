@@ -313,14 +313,22 @@ class TestReviewWithFallback:
             fallback_model="fallback-model",
         )
 
-        # 主模型失败
+        # 主模型失败，备选模型成功
         with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.side_effect = Exception("Primary failed")
+            mock_call.side_effect = [
+                Exception("Primary failed"),  # 第一次调用失败
+                json.dumps({  # 第二次调用成功
+                    "summary": "Fallback review",
+                    "severity": "low",
+                    "comments": [],
+                }),
+            ]
 
             result = await reviewer.review_with_fallback(ReviewContext(diff="test"))
 
             # 应该使用备选模型重试
             assert mock_call.call_count == 2  # 两次调用
+            assert result.metadata.get("used_fallback_model") is True
 
     @pytest.mark.asyncio
     async def test_no_fallback_on_success(self) -> None:
