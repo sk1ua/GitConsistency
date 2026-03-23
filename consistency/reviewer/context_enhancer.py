@@ -168,19 +168,23 @@ class ContextEnhancer:
 
         # 提取调用者信息
         for caller in ctx.callers[:3]:  # 限制前 3 个
-            result["callers"].append({
-                "name": caller.get("name", "unknown"),
-                "file": caller.get("file", ""),
-                "line": caller.get("line", 0),
-            })
+            result["callers"].append(
+                {
+                    "name": caller.get("name", "unknown"),
+                    "file": caller.get("file", ""),
+                    "line": caller.get("line", 0),
+                }
+            )
 
         # 提取被调用者信息
         for callee in ctx.callees[:3]:
-            result["callees"].append({
-                "name": callee.get("name", "unknown"),
-                "file": callee.get("file", ""),
-                "line": callee.get("line", 0),
-            })
+            result["callees"].append(
+                {
+                    "name": callee.get("name", "unknown"),
+                    "file": callee.get("file", ""),
+                    "line": callee.get("line", 0),
+                }
+            )
 
         return result
 

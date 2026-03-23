@@ -118,12 +118,11 @@ class TestPostComment:
 
     @pytest.mark.asyncio
     async def test_post_comment_not_configured(self) -> None:
-        """测试未配置时返回错误."""
+        """测试未配置时抛出错误."""
         github = GitHubIntegration(token=None)
 
-        result = await github.post_comment("owner/repo", 1, "Body")
-
-        assert "error" in result
+        with pytest.raises(GitHubError):
+            await github.post_comment("owner/repo", 1, "Body")
 
 
 class TestDeletePreviousComments:

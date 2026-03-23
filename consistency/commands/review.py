@@ -79,14 +79,10 @@ class ReviewCommand:
                 if await client.ensure_available():
                     self._gitnexus = client
                 else:
-                    console.print(
-                        "[yellow]⚠ GitNexus 不可用，将不使用代码知识图谱[/yellow]"
-                    )
+                    console.print("[yellow]⚠ GitNexus 不可用，将不使用代码知识图谱[/yellow]")
             except Exception as e:
                 logger.warning(f"GitNexus 初始化失败: {e}")
-                console.print(
-                    "[yellow]⚠ GitNexus 初始化失败，将不使用代码知识图谱[/yellow]"
-                )
+                console.print("[yellow]⚠ GitNexus 初始化失败，将不使用代码知识图谱[/yellow]")
 
         return self._gitnexus
 
@@ -276,11 +272,7 @@ class ReviewCommand:
 
         # 汇总结果
         total_issues = sum(len(r.comments) for r in results)
-        critical_count = sum(
-            1 for r in results
-            for c in r.comments
-            if c.severity.value in ("CRITICAL", "HIGH")
-        )
+        critical_count = sum(1 for r in results for c in r.comments if c.severity.value in ("CRITICAL", "HIGH"))
 
         # 显示汇总表
         self._display_batch_summary(valid_files, results, total_issues, critical_count)
@@ -401,9 +393,7 @@ class ReviewCommand:
                         "LOW": "blue",
                     }.get(c.severity.value, "white")
 
-                    console.print(
-                        f"  [{sev_color}]{c.severity.value}[/{sev_color}] {c.message}"
-                    )
+                    console.print(f"  [{sev_color}]{c.severity.value}[/{sev_color}] {c.message}")
             else:
                 console.print(f"[green]✓ {file_summary}[/green]")
 

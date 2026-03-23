@@ -85,10 +85,7 @@ class ReviewSupervisor:
         logger.info(f"开始审查: {file_path} (Agent: {list(self.agents.keys())})")
 
         # 1. 并行执行各 Agent
-        agent_tasks = [
-            self._run_agent(name, agent, file_path, code)
-            for name, agent in self.agents.items()
-        ]
+        agent_tasks = [self._run_agent(name, agent, file_path, code) for name, agent in self.agents.items()]
 
         agent_results = await asyncio.gather(*agent_tasks, return_exceptions=True)
 

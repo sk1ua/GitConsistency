@@ -135,14 +135,16 @@ class SecurityAgent(BaseAgent):
                 try:
                     ctx = await self.gitnexus.get_context(func)
                     if ctx and ctx.callers:
-                        findings.append({
-                            "rule_id": f"gitnexus-dangerous-{func}",
-                            "message": f"危险函数 '{func}' 被调用，调用链: {len(ctx.callers)} 处",
-                            "severity": "HIGH" if func in ["eval", "exec"] else "MEDIUM",
-                            "file_path": file_path,
-                            "line": self._find_line(code, func),
-                            "source": "gitnexus",
-                        })
+                        findings.append(
+                            {
+                                "rule_id": f"gitnexus-dangerous-{func}",
+                                "message": f"危险函数 '{func}' 被调用，调用链: {len(ctx.callers)} 处",
+                                "severity": "HIGH" if func in ["eval", "exec"] else "MEDIUM",
+                                "file_path": file_path,
+                                "line": self._find_line(code, func),
+                                "source": "gitnexus",
+                            }
+                        )
                 except Exception as e:
                     logger.debug(f"GitNexus 上下文获取失败 {func}: {e}")
 
@@ -218,10 +220,7 @@ class SecurityAgent(BaseAgent):
         """生成修复建议."""
         items = []
 
-        critical_high = [
-            f for f in findings
-            if f.get("severity") in ["CRITICAL", "HIGH"]
-        ]
+        critical_high = [f for f in findings if f.get("severity") in ["CRITICAL", "HIGH"]]
 
         if critical_high:
             items.append(f"优先修复 {len(critical_high)} 个严重/高危安全问题")

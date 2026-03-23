@@ -71,7 +71,7 @@ class DiffParser:
             # 解析文件头
             if line.startswith("diff --git"):
                 # 提取文件路径
-                match = re.match(r'diff --git a/(.+?) b/(.+)', line)
+                match = re.match(r"diff --git a/(.+?) b/(.+)", line)
                 if match:
                     old_path = match.group(1)
                     new_path = match.group(2)
@@ -135,7 +135,7 @@ class DiffParser:
             if line.startswith("@@"):
                 # @@ -old_start,old_count +new_start,new_count @@
                 match = re.match(
-                    r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@',
+                    r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@",
                     line,
                 )
                 if match:
@@ -356,10 +356,9 @@ Returns:
         result = await self.supervisor.review(Path(file_path), code)
 
         # 只保留关键问题
-        critical_issues = [
-            c for c in result.comments
-            if c.severity in [Severity.CRITICAL, Severity.HIGH]
-        ][:5]  # 最多 5 个
+        critical_issues = [c for c in result.comments if c.severity in [Severity.CRITICAL, Severity.HIGH]][
+            :5
+        ]  # 最多 5 个
 
         duration = (time.perf_counter() - start) * 1000
 

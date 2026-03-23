@@ -96,48 +96,53 @@ class LogicAgent(BaseAgent):
             # 检查裸 except
             if isinstance(node, ast.ExceptHandler):
                 if node.type is None:
-                    findings.append({
-                        "type": "bare_except",
-                        "message": "使用裸 except: 会捕获所有异常包括 KeyboardInterrupt，建议指定具体异常类型",
-                        "line": node.lineno,
-                        "severity": "MEDIUM",
-                    })
+                    findings.append(
+                        {
+                            "type": "bare_except",
+                            "message": "使用裸 except: 会捕获所有异常包括 KeyboardInterrupt，建议指定具体异常类型",
+                            "line": node.lineno,
+                            "severity": "MEDIUM",
+                        }
+                    )
 
             # 检查空函数
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if not node.body or (
-                    len(node.body) == 1
-                    and isinstance(node.body[0], ast.Pass)
-                ):
-                    findings.append({
-                        "type": "empty_function",
-                        "message": f"函数 '{node.name}' 为空或只有 pass，建议实现或删除",
-                        "line": node.lineno,
-                        "severity": "LOW",
-                    })
+                if not node.body or (len(node.body) == 1 and isinstance(node.body[0], ast.Pass)):
+                    findings.append(
+                        {
+                            "type": "empty_function",
+                            "message": f"函数 '{node.name}' 为空或只有 pass，建议实现或删除",
+                            "line": node.lineno,
+                            "severity": "LOW",
+                        }
+                    )
 
                 # 检查复杂函数（行数过多）
                 func_end = node.end_lineno or node.lineno
                 func_lines = func_end - node.lineno
                 if func_lines > 50:
-                    findings.append({
-                        "type": "complex_function",
-                        "message": f"函数 '{node.name}' 过长 ({func_lines} 行)，建议拆分",
-                        "line": node.lineno,
-                        "severity": "MEDIUM",
-                    })
+                    findings.append(
+                        {
+                            "type": "complex_function",
+                            "message": f"函数 '{node.name}' 过长 ({func_lines} 行)，建议拆分",
+                            "line": node.lineno,
+                            "severity": "MEDIUM",
+                        }
+                    )
 
             # 检查硬编码值
             elif isinstance(node, ast.Constant):
                 if isinstance(node.value, str) and len(node.value) > 20:
                     # 可能是 SQL 或 硬编码配置
                     if "SELECT" in node.value.upper() or "INSERT" in node.value.upper():
-                        findings.append({
-                            "type": "hardcoded_sql",
-                            "message": "检测到硬编码 SQL，建议使用 ORM 或参数化查询",
-                            "line": node.lineno,
-                            "severity": "MEDIUM",
-                        })
+                        findings.append(
+                            {
+                                "type": "hardcoded_sql",
+                                "message": "检测到硬编码 SQL，建议使用 ORM 或参数化查询",
+                                "line": node.lineno,
+                                "severity": "MEDIUM",
+                            }
+                        )
 
             # 检查递归深度
             elif isinstance(node, ast.Call):
@@ -155,31 +160,37 @@ class LogicAgent(BaseAgent):
         for i, line in enumerate(lines, 1):
             # 检查 TODO 注释
             if "TODO" in line.upper() or "FIXME" in line.upper():
-                findings.append({
-                    "type": "todo",
-                    "message": f"发现待办事项: {line.strip()}",
-                    "line": i,
-                    "severity": "LOW",
-                })
+                findings.append(
+                    {
+                        "type": "todo",
+                        "message": f"发现待办事项: {line.strip()}",
+                        "line": i,
+                        "severity": "LOW",
+                    }
+                )
 
             # 检查长行
             if len(line) > 120:
-                findings.append({
-                    "type": "long_line",
-                    "message": f"行过长 ({len(line)} 字符)，建议不超过 120 字符",
-                    "line": i,
-                    "severity": "LOW",
-                })
+                findings.append(
+                    {
+                        "type": "long_line",
+                        "message": f"行过长 ({len(line)} 字符)，建议不超过 120 字符",
+                        "line": i,
+                        "severity": "LOW",
+                    }
+                )
 
             # 检查 print 语句
             stripped = line.strip()
             if stripped.startswith("print(") and "logger" not in line.lower():
-                findings.append({
-                    "type": "print_statement",
-                    "message": "使用 print 输出，建议使用 logging 模块",
-                    "line": i,
-                    "severity": "LOW",
-                })
+                findings.append(
+                    {
+                        "type": "print_statement",
+                        "message": "使用 print 输出，建议使用 logging 模块",
+                        "line": i,
+                        "severity": "LOW",
+                    }
+                )
 
         return findings
 
@@ -207,21 +218,25 @@ class LogicAgent(BaseAgent):
                     if ctx:
                         # 检查调用深度
                         if len(ctx.callees) > 10:
-                            findings.append({
-                                "type": "deep_call_chain",
-                                "message": f"函数 '{node.name}' 调用链较深 ({len(ctx.callees)} 层)，建议简化",
-                                "line": node.lineno,
-                                "severity": "MEDIUM",
-                            })
+                            findings.append(
+                                {
+                                    "type": "deep_call_chain",
+                                    "message": f"函数 '{node.name}' 调用链较深 ({len(ctx.callees)} 层)，建议简化",
+                                    "line": node.lineno,
+                                    "severity": "MEDIUM",
+                                }
+                            )
 
                         # 检查是否有循环依赖（简化检查）
                         if any(c.get("name") == node.name for c in ctx.callees):
-                            findings.append({
-                                "type": "cyclic_dependency",
-                                "message": f"函数 '{node.name}' 可能存在循环调用",
-                                "line": node.lineno,
-                                "severity": "HIGH",
-                            })
+                            findings.append(
+                                {
+                                    "type": "cyclic_dependency",
+                                    "message": f"函数 '{node.name}' 可能存在循环调用",
+                                    "line": node.lineno,
+                                    "severity": "HIGH",
+                                }
+                            )
 
                 except Exception as e:
                     logger.debug(f"GitNexus 分析失败 {node.name}: {e}")
@@ -284,10 +299,7 @@ class LogicAgent(BaseAgent):
         """生成修复建议."""
         items = []
 
-        critical_high = [
-            f for f in findings
-            if f.get("severity") in ["CRITICAL", "HIGH"]
-        ]
+        critical_high = [f for f in findings if f.get("severity") in ["CRITICAL", "HIGH"]]
 
         if critical_high:
             items.append(f"优先处理 {len(critical_high)} 个严重/高危逻辑问题")

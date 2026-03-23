@@ -85,22 +85,26 @@ class StyleAgent(BaseAgent):
             if isinstance(node, ast.FunctionDef):
                 if not re.match(r"^[a-z_][a-z0-9_]*$", node.name):
                     if not (node.name.startswith("__") and node.name.endswith("__")):
-                        findings.append({
-                            "type": "naming_function",
-                            "message": f"函数名 '{node.name}' 不符合 snake_case 规范",
-                            "line": node.lineno,
-                            "severity": "LOW",
-                        })
+                        findings.append(
+                            {
+                                "type": "naming_function",
+                                "message": f"函数名 '{node.name}' 不符合 snake_case 规范",
+                                "line": node.lineno,
+                                "severity": "LOW",
+                            }
+                        )
 
             # 检查类命名（PascalCase）
             elif isinstance(node, ast.ClassDef):
                 if not re.match(r"^[A-Z][a-zA-Z0-9]*$", node.name):
-                    findings.append({
-                        "type": "naming_class",
-                        "message": f"类名 '{node.name}' 不符合 PascalCase 规范",
-                        "line": node.lineno,
-                        "severity": "LOW",
-                    })
+                    findings.append(
+                        {
+                            "type": "naming_class",
+                            "message": f"类名 '{node.name}' 不符合 PascalCase 规范",
+                            "line": node.lineno,
+                            "severity": "LOW",
+                        }
+                    )
 
             # 检查常量（UPPER_CASE）
             elif isinstance(node, ast.Assign):
@@ -114,12 +118,14 @@ class StyleAgent(BaseAgent):
                             if isinstance(node.value, ast.Constant):
                                 if isinstance(node.value.value, (int, float, str)):
                                     if target.id not in ["True", "False", "None"]:
-                                        findings.append({
-                                            "type": "naming_constant",
-                                            "message": f"常量 '{target.id}' 建议使用全大写",
-                                            "line": node.lineno,
-                                            "severity": "LOW",
-                                        })
+                                        findings.append(
+                                            {
+                                                "type": "naming_constant",
+                                                "message": f"常量 '{target.id}' 建议使用全大写",
+                                                "line": node.lineno,
+                                                "severity": "LOW",
+                                            }
+                                        )
 
         return findings
 
@@ -138,12 +144,14 @@ class StyleAgent(BaseAgent):
                         and isinstance(node.body[0].value.value, str)
                     )
                     if not has_docstring:
-                        findings.append({
-                            "type": "missing_docstring",
-                            "message": f"公共函数 '{node.name}' 缺少文档字符串",
-                            "line": node.lineno,
-                            "severity": "LOW",
-                        })
+                        findings.append(
+                            {
+                                "type": "missing_docstring",
+                                "message": f"公共函数 '{node.name}' 缺少文档字符串",
+                                "line": node.lineno,
+                                "severity": "LOW",
+                            }
+                        )
 
             elif isinstance(node, ast.ClassDef):
                 # 检查公共类是否有 docstring
@@ -155,12 +163,14 @@ class StyleAgent(BaseAgent):
                         and isinstance(node.body[0].value.value, str)
                     )
                     if not has_docstring:
-                        findings.append({
-                            "type": "missing_docstring",
-                            "message": f"类 '{node.name}' 缺少文档字符串",
-                            "line": node.lineno,
-                            "severity": "LOW",
-                        })
+                        findings.append(
+                            {
+                                "type": "missing_docstring",
+                                "message": f"类 '{node.name}' 缺少文档字符串",
+                                "line": node.lineno,
+                                "severity": "LOW",
+                            }
+                        )
 
         return findings
 
@@ -172,30 +182,36 @@ class StyleAgent(BaseAgent):
         for i, line in enumerate(lines, 1):
             # 检查行尾空格
             if line.rstrip() != line:
-                findings.append({
-                    "type": "trailing_whitespace",
-                    "message": "行尾有多余空格",
-                    "line": i,
-                    "severity": "INFO",
-                })
+                findings.append(
+                    {
+                        "type": "trailing_whitespace",
+                        "message": "行尾有多余空格",
+                        "line": i,
+                        "severity": "INFO",
+                    }
+                )
 
             # 检查 Tab 使用
             if "\t" in line:
-                findings.append({
-                    "type": "tab_indent",
-                    "message": "使用 Tab 缩进，建议使用空格",
-                    "line": i,
-                    "severity": "LOW",
-                })
+                findings.append(
+                    {
+                        "type": "tab_indent",
+                        "message": "使用 Tab 缩进，建议使用空格",
+                        "line": i,
+                        "severity": "LOW",
+                    }
+                )
 
             # 检查多余空行
             if i > 1 and not lines[i - 2].strip() and not line.strip():
-                findings.append({
-                    "type": "extra_blank_line",
-                    "message": "多余的空行",
-                    "line": i,
-                    "severity": "INFO",
-                })
+                findings.append(
+                    {
+                        "type": "extra_blank_line",
+                        "message": "多余的空行",
+                        "line": i,
+                        "severity": "INFO",
+                    }
+                )
 
         return findings
 
@@ -222,12 +238,14 @@ class StyleAgent(BaseAgent):
             is_stdlib = module in stdlib_modules
 
             if prev_is_stdlib is False and is_stdlib:
-                findings.append({
-                    "type": "import_order",
-                    "message": "导入排序可能不正确，标准库导入应在第三方库之前",
-                    "line": i,
-                    "severity": "INFO",
-                })
+                findings.append(
+                    {
+                        "type": "import_order",
+                        "message": "导入排序可能不正确，标准库导入应在第三方库之前",
+                        "line": i,
+                        "severity": "INFO",
+                    }
+                )
 
             prev_is_stdlib = is_stdlib
 

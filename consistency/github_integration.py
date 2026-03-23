@@ -104,8 +104,7 @@ class GitHubIntegration:
             from github import Github  # noqa: F401
         except ImportError as e:
             raise GitHubError(
-                "PyGithub 未安装，请运行: pip install pygithub",
-                details={"original_error": str(e)}
+                "PyGithub 未安装，请运行: pip install pygithub", details={"original_error": str(e)}
             ) from e
 
         self._semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -216,23 +215,17 @@ class GitHubIntegration:
                 # 分类处理常见错误并抛出具体异常
                 if "401" in error_msg or "Bad credentials" in error_msg:
                     raise GitHubAuthError(
-                        "GitHub 认证失败，请检查 GITHUB_TOKEN",
-                        details={"original_error": error_msg}
+                        "GitHub 认证失败，请检查 GITHUB_TOKEN", details={"original_error": error_msg}
                     ) from e
                 elif "403" in error_msg and "rate limit" in error_msg.lower():
                     raise GitHubRateLimitError(
-                        "GitHub API 速率限制，请稍后重试",
-                        details={"original_error": error_msg}
+                        "GitHub API 速率限制，请稍后重试", details={"original_error": error_msg}
                     ) from e
                 elif "404" in error_msg:
                     raise GitHubNotFoundError(
-                        f"PR 或仓库未找到: {repo}#{pr_number}",
-                        details={"original_error": error_msg}
+                        f"PR 或仓库未找到: {repo}#{pr_number}", details={"original_error": error_msg}
                     ) from e
-                raise GitHubError(
-                    f"发布评论失败: {error_msg}",
-                    details={"repo": repo, "pr_number": pr_number}
-                ) from e
+                raise GitHubError(f"发布评论失败: {error_msg}", details={"repo": repo, "pr_number": pr_number}) from e
 
     async def post_file_comment(
         self,
