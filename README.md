@@ -188,7 +188,8 @@ jobs:
       - run: gitconsistency ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          CONSISTENCY_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONSISTENCY_LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
 ```
 
 ### Secrets 配置
@@ -196,10 +197,10 @@ jobs:
 | 配置项 | 类型 | 必需 | 说明 |
 |--------|------|------|------|
 | `GITHUB_TOKEN` | Secret | ✅ 自动 | GitHub 自动提供 |
-| `LITELLM_API_KEY` | Secret | ❌ 推荐 | LLM API 密钥 |
-| `LITELLM_MODEL` | Variable | ❌ 可选 | 默认 `deepseek/deepseek-chat` |
+| `CONSISTENCY_LITELLM_API_KEY` | Secret | ❌ 推荐 | LLM API 密钥（推荐） |
+| `CONSISTENCY_LITELLM_MODEL` | Variable | ❌ 可选 | 默认 `deepseek/deepseek-chat` |
 
-支持的模型：`deepseek/deepseek-chat`, `anthropic/claude-3-5-sonnet`, `openai/gpt-4`, `xai/grok-beta`
+支持直接设置 `LITELLM_API_KEY`（向后兼容），但推荐使用 `CONSISTENCY_` 前缀。
 
 ---
 
