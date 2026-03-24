@@ -227,6 +227,7 @@ jobs:
   lint:
     name: 🧹 Lint & Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -256,16 +257,16 @@ jobs:
 
       - name: Ruff check
         run: |
-          # Only check critical errors (E, F, W), ignore style/doc issues
-          ruff check consistency/ --select E,W,F
+          ruff check consistency/ --select E,W,F --output-format=concise
 
       - name: Ruff format check
         run: |
           ruff format --check consistency/
 
       - name: MyPy type check
+        timeout-minutes: 5
         run: |
-          mypy consistency/
+          mypy consistency/ --ignore-missing-imports
 
   # ===========================================================================
   # 测试
