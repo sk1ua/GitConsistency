@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from consistency.report.formatters import HtmlFormatter, JsonFormatter, MarkdownFormatter
-from consistency.report.templates import ReportFormat, ReportTheme
+from consistency.report.templates import MarkdownTemplates, ReportFormat, ReportTheme
 from consistency.reviewer.models import ReviewResult
 from consistency.scanners.base import Finding, ScanResult, Severity
 
@@ -87,8 +87,10 @@ class ReportGenerator:
         agent_reviews: list[ReviewResult] | None = None,
         project_name: str = "Unknown",
         max_length: int = 65536,
+        commit_sha: str = "HEAD",
+        duration: float = 0.0,
     ) -> str:
-        """生成 GitHub PR 评论.
+        """生成 GitHub PR 评论（傻瓜级修复清单格式）.
 
         Args:
             scan_results: 扫描结果列表
@@ -96,10 +98,14 @@ class ReportGenerator:
             agent_reviews: 多 Agent 审查结果列表
             project_name: 项目名称
             max_length: 最大长度限制
+            commit_sha: 提交 SHA
+            duration: 扫描耗时
 
         Returns:
             评论内容
         """
+        from datetime import datetime
+
         from consistency import __version__
 
         # 收集统计数据
@@ -107,86 +113,196 @@ class ReportGenerator:
         for result in scan_results:
             all_findings.extend(result.findings)
 
+        # 按严重级别统计
         severity_counts: dict[Severity, int] = dict.fromkeys(Severity, 0)
         for finding in all_findings:
             severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
 
+        critical_count = severity_counts.get(Severity.CRITICAL, 0)
+        high_count = severity_counts.get(Severity.HIGH, 0)
+        medium_count = severity_counts.get(Severity.MEDIUM, 0)
+        low_count = severity_counts.get(Severity.LOW, 0)
+        info_count = severity_counts.get(Severity.INFO, 0)
+
+        # 生成头部
         lines = [
-            f"## 🔍 GitConsistency Code Review - {project_name}",
-            "",
-            f"**Overall Status**: {self._get_status_emoji(severity_counts)}",
-            "",
-            "### Summary",
-            f"- 🟢 Passed: {severity_counts.get(Severity.LOW, 0) + severity_counts.get(Severity.INFO, 0)}",
-            f"- 🟡 Warnings: {severity_counts.get(Severity.MEDIUM, 0)}",
-            f"- 🔴 Issues: {severity_counts.get(Severity.HIGH, 0) + severity_counts.get(Severity.CRITICAL, 0)}",
-            "",
+            MarkdownTemplates.FIX_CHECKLIST_HEADER.format(
+                critical_count=critical_count,
+                high_count=high_count,
+                medium_count=medium_count,
+                project_name=project_name,
+                scan_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                duration=duration,
+                commit_sha=commit_sha[:8] if commit_sha else "HEAD",
+            )
         ]
 
-        # 添加多 Agent 审查结果
+        # 严重问题 - 默认展开
+        critical_issues = [f for f in all_findings if f.severity == Severity.CRITICAL]
+        if critical_issues:
+            for idx, finding in enumerate(critical_issues, 1):
+                evidence = self._format_evidence(finding)
+                fixes = self._format_fixes(finding)
+                lines.append(
+                    MarkdownTemplates.CRITICAL_ISSUE.format(
+                        index=idx,
+                        title=self._escape_html(finding.rule_id),
+                        subtitle=self._escape_html(finding.message[:80]),
+                        impact="此问题可能导致严重安全隐患或工具完全无法使用",
+                        evidence=evidence,
+                        fixes=fixes,
+                        warning="必须修复后才能合并",
+                    )
+                )
+
+        # 中等问题 - 默认折叠
+        high_issues = [f for f in all_findings if f.severity == Severity.HIGH]
+        if high_issues:
+            for idx, finding in enumerate(high_issues, 1):
+                evidence = self._format_evidence(finding)
+                fixes = self._format_fixes(finding)
+                lines.append(
+                    MarkdownTemplates.HIGH_ISSUE.format(
+                        index=idx,
+                        title=self._escape_html(finding.rule_id),
+                        subtitle=self._escape_html(finding.message[:80]),
+                        impact="此问题可能导致资源浪费或潜在安全隐患",
+                        evidence=evidence,
+                        fixes=fixes,
+                        suggestion="建议在合并前修复",
+                    )
+                )
+
+        # 轻微问题 - 默认折叠
+        medium_issues = [f for f in all_findings if f.severity == Severity.MEDIUM]
+        if medium_issues:
+            for idx, finding in enumerate(medium_issues, 1):
+                evidence = self._format_evidence(finding)
+                fix_suggestion = finding.metadata.get("fix", finding.metadata.get("suggestion", ""))
+                fix = self._escape_html(fix_suggestion or "Please check and fix this issue")
+                lines.append(
+                    MarkdownTemplates.MEDIUM_ISSUE.format(
+                        index=idx,
+                        title=self._escape_html(finding.rule_id),
+                        subtitle=self._escape_html(finding.message[:80]),
+                        impact="此问题可能影响代码质量或用户体验",
+                        evidence=evidence,
+                        fix=fix,
+                    )
+                )
+
+        # 低/信息级别问题 - 简化显示
+        low_issues = [f for f in all_findings if f.severity in (Severity.LOW, Severity.INFO)]
+        if low_issues:
+            lines.append("## 🟡 信息提示\n")
+            for finding in low_issues[:10]:  # 最多显示10个
+                lines.append(
+                    MarkdownTemplates.LOW_ISSUE.format(
+                        file=str(finding.file_path) if finding.file_path else "-",
+                        line=finding.line or 0,
+                        message=self._escape_html(finding.message[:60]),
+                    )
+                )
+            if len(low_issues) > 10:
+                lines.append(f"\n... 还有 {len(low_issues) - 10} 个信息提示未显示")
+            lines.append("")
+
+        # Agent 审查结果
         if agent_reviews:
-            lines.append("### 🤖 Multi-Agent Review")
-            lines.append("")
+            lines.append(MarkdownTemplates.AGENT_SECTION_HEADER)
+            agent_idx = 1
+            for review in agent_reviews:
+                for comment in review.comments:
+                    severity_icon = self._get_severity_icon(comment.severity.value)
+                    open_attr = ' open' if comment.severity.value in ("HIGH", "CRITICAL") else ''
+                    snippet = ""
+                    if comment.code_snippet:
+                        snippet = MarkdownTemplates.CODE_SNIPPET.format(
+                            language="python",  # 简化处理
+                            code=comment.code_snippet[:200],
+                        )
+                    lines.append(
+                        MarkdownTemplates.AGENT_FINDING.format(
+                            open_attr=open_attr,
+                            severity_icon=severity_icon,
+                            agent_name=review.agent_name or "Agent",
+                            index=agent_idx,
+                            title=self._escape_html(comment.category.value),
+                            category=comment.category.value,
+                            file_path=str(comment.file) if comment.file else "-",
+                            line=comment.line or 0,
+                            message=self._escape_html(comment.message),
+                            snippet=snippet,
+                            suggestion=self._escape_html(comment.suggestion or "无具体建议"),
+                        )
+                    )
+                    agent_idx += 1
 
-            # 统计各 Agent 的结果
-            total_agent_comments = sum(len(r.comments) for r in agent_reviews)
-            lines.append("启用 **SecurityAgent**、**LogicAgent**、**StyleAgent** 并行审查")
-            lines.append(f"- 审查文件数: {len(agent_reviews)}")
-            lines.append(f"- Agent 发现问题: {total_agent_comments}")
-            lines.append("")
+        # 页脚 - 统计摘要
+        critical_status = "❌ 需修复" if critical_count > 0 else "✅ 通过"
+        high_status = "⚠️ 建议修复" if high_count > 0 else "✅ 通过"
+        medium_status = "💡 可选优化" if medium_count > 0 else "✅ 通过"
 
-            # 显示高严重级别的问题
-            high_issues: list[tuple[ReviewResult, Any]] = []
-            for r in agent_reviews:
-                for c in r.comments:
-                    if c.severity.value in ("HIGH", "CRITICAL"):
-                        high_issues.append((r, c))
-
-            if high_issues:
-                lines.append("**Agent 发现的关键问题：**")
-                for _, comment in high_issues[:5]:  # 最多 5 个
-                    location = f"`{comment.file}:{comment.line}`" if comment.file and comment.line else ""
-                    lines.append(f"- **{comment.severity.value}** [{comment.category.value}] {comment.message[:80]}")
-                    if location:
-                        lines.append(f"  - 📍 {location}")
-                lines.append("")
-
-        # 添加关键问题
-        critical_and_high = [f for f in all_findings if f.severity in (Severity.CRITICAL, Severity.HIGH)][
-            :10
-        ]  # 最多显示 10 个
-
-        if critical_and_high:
-            lines.append("### 🚨 Security Scan Issues")
-            lines.append("")
-            for finding in critical_and_high:
-                location = f"`{finding.file_path}:{finding.line}`" if finding.file_path else ""
-                lines.append(f"- **{finding.severity.value.upper()}** [{finding.rule_id}] {finding.message[:100]}")
-                if location:
-                    lines.append(f"  - {location}")
-            lines.append("")
-
-        # 添加 AI 审查摘要
-        if ai_review:
-            lines.append("### 📝 AI Review Summary")
-            lines.append(f"{ai_review.summary[:200]}...")
-            lines.append("")
-
-            if ai_review.has_blocking_issues:
-                lines.append("⚠️ **Blocking issues detected. Please address before merging.**")
-                lines.append("")
-
-        # 添加签名
-        lines.append("---")
-        lines.append(f"*Report generated by GitConsistency v{__version__}*")
+        lines.append(
+            MarkdownTemplates.FOOTER.format(
+                critical_count=critical_count,
+                critical_status=critical_status,
+                high_count=high_count,
+                high_status=high_status,
+                medium_count=medium_count,
+                medium_status=medium_status,
+                info_count=low_count + info_count,
+                version=__version__,
+            )
+        )
 
         comment = "\n".join(lines)
 
         # 截断如果超过限制
         if len(comment) > max_length:
-            comment = comment[: max_length - 100] + "\n\n... (truncated)"
+            comment = comment[: max_length - 100] + "\n\n... (内容已截断)"
 
         return comment
+
+    def _format_evidence(self, finding: Finding) -> str:
+        """格式化证据/定位信息."""
+        lines = []
+        if finding.file_path:
+            lines.append(f"- **文件**: `{finding.file_path}`")
+        if finding.line:
+            lines.append(f"- **行号**: {finding.line}")
+        if finding.code_snippet:
+            lines.append(f"\n**代码片段**:")
+            lines.append(f"```python\n{finding.code_snippet[:300]}\n```")
+        return "\n".join(lines) if lines else "- 无具体位置信息"
+
+    def _format_fixes(self, finding: Finding) -> str:
+        """格式化修复方案."""
+        lines = []
+        # 从 metadata 获取建议
+        suggestion = finding.metadata.get("fix", finding.metadata.get("suggestion", ""))
+        if suggestion:
+            lines.append(f"- [ ] {suggestion}")
+        else:
+            lines.append(f"- [ ] 检查并修复: {finding.message}")
+        # 添加通用的检查项
+        lines.append("- [ ] 验证修复后重新运行扫描")
+        return "\n".join(lines) if lines else "- [ ] 请手动检查并修复"
+
+    def _escape_html(self, text: str) -> str:
+        """转义 HTML 特殊字符."""
+        return text.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
+
+    def _get_severity_icon(self, severity: str) -> str:
+        """获取严重级别图标."""
+        mapping = {
+            "CRITICAL": "🔴",
+            "HIGH": "🟠",
+            "MEDIUM": "🟡",
+            "LOW": "🟢",
+            "INFO": "🔵",
+        }
+        return mapping.get(severity.upper(), "⚪")
 
     def save_report(
         self,

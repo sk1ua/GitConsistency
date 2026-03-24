@@ -73,7 +73,25 @@ class MarkdownFormatter(BaseFormatter):
             parts.append(ai_section)
 
         # 页脚
-        footer = self.md.FOOTER.format(version=self.version)
+        critical_count = severity_counts.get(Severity.CRITICAL, 0)
+        high_count = severity_counts.get(Severity.HIGH, 0)
+        medium_count = severity_counts.get(Severity.MEDIUM, 0)
+        info_count = severity_counts.get(Severity.INFO, 0)
+
+        critical_status = "❌ Need Fix" if critical_count > 0 else "✅ Pass"
+        high_status = "⚠️ Suggest Fix" if high_count > 0 else "✅ Pass"
+        medium_status = "💡 Optional" if medium_count > 0 else "✅ Pass"
+
+        footer = self.md.FOOTER.format(
+            version=self.version,
+            critical_count=critical_count,
+            critical_status=critical_status,
+            high_count=high_count,
+            high_status=high_status,
+            medium_count=medium_count,
+            medium_status=medium_status,
+            info_count=info_count,
+        )
         parts.append(footer)
 
         return "\n".join(parts)

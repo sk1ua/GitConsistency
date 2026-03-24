@@ -234,7 +234,8 @@ class TestGenerateGitHubComment:
 
         comment = generator.generate_github_comment([result], project_name="Test")
 
-        assert "GitConsistency Code Review" in comment
+        assert "GitConsistency" in comment
+        assert "代码审查报告" in comment or "Code Review" in comment
         assert "Test" in comment
 
     def test_generate_github_comment_truncation(self) -> None:
