@@ -123,7 +123,10 @@ jobs:
         run: |
           # 使用 pip 而非 uv，确保 setuptools 正确安装
           pip install setuptools wheel
-          pip install -e ".[full]"
+          pip install -e "."
+          # Install optional deps separately
+          pip install litellm || true
+          pip install semgrep bandit safety pygithub pyjwt || true
 
       # -----------------------------------------------------------------------
       # 缓存模型和数据
@@ -253,7 +256,11 @@ jobs:
       - name: Install dev dependencies
         run: |
           pip install setuptools wheel
-          pip install -e ".[dev,full]"
+          # Install litellm separately to avoid resolution issues
+          pip install litellm || true
+          pip install -e ".[dev]"
+          # Install security scanners separately
+          pip install semgrep bandit safety pygithub pyjwt || true
 
       - name: Ruff check
         run: |
@@ -314,7 +321,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install setuptools wheel
-          pip install -e ".[dev,full]"
+          pip install litellm || true
+          pip install -e ".[dev]"
+          pip install semgrep bandit safety pygithub pyjwt || true
 
       - name: Run tests with coverage
         run: |
@@ -364,7 +373,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install setuptools wheel
-          pip install -e ".[dev,full]"
+          pip install -e ".[dev]"
+          pip install litellm || true
+          pip install semgrep bandit safety pygithub pyjwt || true
 
       - name: Run GitNexus tests
         run: |
