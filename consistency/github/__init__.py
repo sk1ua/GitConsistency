@@ -13,10 +13,20 @@ from __future__ import annotations
 from typing import Any
 
 from consistency.github.checks import CheckManager, PRInfo
+from consistency.github.ci_utils import (
+    debug_print_context,
+    get_workflow_context,
+    is_github_actions,
+    set_actions_output,
+    set_actions_outputs_from_results,
+    write_actions_summary,
+    write_annotations_from_findings,
+    write_workflow_annotation,
+)
 from consistency.github.client import GitHubClient
 from consistency.github.comments import CommentManager, PRComment
 from consistency.github.labels import LabelManager
-from consistency.github.utils import detect_from_env, is_github_actions, parse_pr_url
+from consistency.github.utils import detect_from_env, is_github_actions as _is_github_actions, parse_pr_url
 
 
 class GitHubIntegration:
@@ -142,11 +152,12 @@ class GitHubIntegration:
     @staticmethod
     def is_github_actions() -> bool:
         """检查是否在 GitHub Actions 环境中运行."""
-        return is_github_actions()
+        return _is_github_actions()
 
 
 # 导出子模块组件（供高级用户使用）
 __all__ = [
+    # Core components
     "CheckManager",
     "CommentManager",
     "GitHubClient",
@@ -154,7 +165,16 @@ __all__ = [
     "LabelManager",
     "PRComment",
     "PRInfo",
-    "detect_from_env",
+    # CI utilities
+    "debug_print_context",
+    "get_workflow_context",
     "is_github_actions",
+    "set_actions_output",
+    "set_actions_outputs_from_results",
+    "write_actions_summary",
+    "write_annotations_from_findings",
+    "write_workflow_annotation",
+    # Utils
+    "detect_from_env",
     "parse_pr_url",
 ]

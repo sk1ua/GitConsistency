@@ -23,15 +23,15 @@
 ### 安装
 
 ```bash
-# 完整功能（推荐）
-pip install "git-consistency[full]"
+# 从源码安装（推荐）
+git clone https://github.com/sk1ua/GitConsistency.git
+cd GitConsistency
+pip install -e ".[full]"
 
-# 或按需安装
-pip install "git-consistency[security]"    # 仅安全扫描
-pip install "git-consistency[ai]"          # 包含 AI 审查
-
-# 使用 uv（推荐开发者）
-uv pip install "git-consistency[full]"
+# 或使用 uv（更快）
+git clone https://github.com/sk1ua/GitConsistency.git
+cd GitConsistency
+uv pip install -e ".[full]"
 ```
 
 ### 配置
@@ -137,22 +137,15 @@ GitNexus 代码图谱（可选，提供上下文）
 
 ### 安装方式
 
-#### 方式一：使用 pip 安装（推荐用户）
-
-```bash
-pip install "git-consistency[full]"
-```
-
-#### 方式二：从源码安装（开发者）
+#### 方式一：从源码安装（推荐）
 
 ```bash
 git clone https://github.com/sk1ua/GitConsistency.git
 cd GitConsistency
-uv venv
-uv pip install -e ".[full,dev]"
+pip install -e ".[full,dev]"
 ```
 
-#### 方式三：使用 Docker
+#### 方式二：使用 Docker
 
 ```bash
 docker build -t gitconsistency .
@@ -188,7 +181,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install "git-consistency[full]"
+      - name: Install GitConsistency
+        run: |
+          pip install setuptools wheel
+          pip install -e ".[full]"
       - run: gitconsistency ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

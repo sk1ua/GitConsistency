@@ -85,13 +85,36 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       # -----------------------------------------------------------------------
+      # pip 缓存
+      # -----------------------------------------------------------------------
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}-${{ env.PYTHON_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}-
+            ${{ runner.os }}-pip-
+
+      # -----------------------------------------------------------------------
+      # Semgrep 规则缓存
+      # -----------------------------------------------------------------------
+      - name: Cache Semgrep rules
+        uses: actions/cache@v4
+        with:
+          path: ~/.semgrep
+          key: ${{ runner.os }}-semgrep-rules-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-semgrep-rules-
+
+      # -----------------------------------------------------------------------
       # 安装 uv
       # -----------------------------------------------------------------------
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
           version: ${{ env.UV_VERSION }}
-          enable-cache: false
+          enable-cache: true
 
       # -----------------------------------------------------------------------
       # 安装 GitConsistency
@@ -136,6 +159,7 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
           PROJECT_PATH: ${{ github.event.inputs.project_path || '.' }}
@@ -152,14 +176,18 @@ jobs:
           
           # 使用系统 Python 运行（避免 uv run 隔离环境问题）
           # 默认启用多 Agent 审查（--use-agents）
+          # PR 模式下使用增量扫描（--changed-only）
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
             echo "🤖 启用多 Agent 智能审查（SecurityAgent + LogicAgent + StyleAgent）"
+            echo "📁 启用增量扫描模式"
             gitconsistency ci \
               --event pull_request \
               --pr "$GITHUB_PR_NUMBER" \
               $SKIP_AI \
               $DRY_RUN_FLAG \
-              --use-agents
+              --use-agents \
+              --changed-only \
+              --base "$GITHUB_BASE_REF"
           else
             gitconsistency analyze "$PROJECT_PATH" \
               $SKIP_AI \
@@ -199,7 +227,7 @@ jobs:
   lint:
     name: 🧹 Lint & Type Check
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -208,15 +236,23 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-lint-${{ hashFiles('**/pyproject.toml') }}-${{ env.PYTHON_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-pip-lint-
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Install dev dependencies
         run: |
           pip install setuptools wheel
-          pip install -e ".[dev,full]" --no-cache
+          pip install -e ".[dev,full]"
 
       - name: Ruff check
         run: |
@@ -237,11 +273,11 @@ jobs:
   test:
     name: 🧪 Run Tests
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -250,10 +286,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-test-${{ hashFiles('**/pyproject.toml') }}-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-test-
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -268,7 +312,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install setuptools wheel
-          pip install -e ".[dev,full]" --no-cache
+          pip install -e ".[dev,full]"
 
       - name: Run tests with coverage
         run: |
@@ -297,6 +341,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-gitnexus-${{ hashFiles('**/pyproject.toml') }}-${{ env.PYTHON_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-pip-gitnexus-
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -310,7 +362,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install setuptools wheel
-          pip install -e ".[dev,full]" --no-cache
+          pip install -e ".[dev,full]"
 
       - name: Run GitNexus tests
         run: |

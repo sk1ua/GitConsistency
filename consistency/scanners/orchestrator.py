@@ -129,6 +129,7 @@ class ScannerOrchestrator:
         scanners: list[str] | None = None,
         skip_scanners: list[str] | None = None,
         skip_security: bool = False,
+        files: list[str] | None = None,
     ) -> ScanReport:
         """执行扫描.
 
@@ -137,6 +138,7 @@ class ScannerOrchestrator:
             scanners: 指定扫描器列表（None 表示全部）
             skip_scanners: 跳过的扫描器列表
             skip_security: 是否跳过安全扫描（兼容参数）
+            files: 指定扫描的文件列表（None 表示扫描全部）
 
         Returns:
             统一扫描报告
@@ -159,7 +161,7 @@ class ScannerOrchestrator:
         if not scanner_names and not skip_security:
             try:
                 scanner = self._get_security_scanner()
-                result = await scanner.scan(path)
+                result = await scanner.scan(path, files=files)
                 results["security"] = result
             except Exception as e:
                 logger.error(f"安全扫描失败: {e}")
@@ -168,7 +170,7 @@ class ScannerOrchestrator:
             # 并行运行所有扫描器
             async def run_single(name: str, scanner: Any) -> tuple[str, ScanResult | Exception]:
                 try:
-                    result = await scanner.scan(path)
+                    result = await scanner.scan(path, files=files)
                     return name, result
                 except Exception as e:
                     return name, e

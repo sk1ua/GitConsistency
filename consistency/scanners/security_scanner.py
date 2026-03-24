@@ -103,26 +103,29 @@ class SecurityScanner(BaseScanner):
     def name(self) -> str:
         return "security"
 
-    async def scan(self, path: Path) -> ScanResult:
+    async def scan(self, path: Path, files: list[str] | None = None) -> ScanResult:
         """执行安全扫描.
 
         并行运行 Semgrep 和 Bandit，合并结果.
 
         Args:
             path: 扫描目标路径
+            files: 指定扫描的文件列表（None 表示扫描全部）
 
         Returns:
             扫描结果
         """
         logger.info(f"开始安全扫描: {path}")
+        if files:
+            logger.info(f"增量扫描模式，扫描 {len(files)} 个文件")
 
         # 并行运行两个扫描器
         semgrep_task = asyncio.create_task(
-            self._run_semgrep(path),
+            self._run_semgrep(path, files),
             name="semgrep_scan",
         )
         bandit_task = asyncio.create_task(
-            self._run_bandit(path),
+            self._run_bandit(path, files),
             name="bandit_scan",
         )
 
@@ -174,7 +177,7 @@ class SecurityScanner(BaseScanner):
 
         return unique
 
-    def _build_semgrep_cmd(self, path: Path) -> list[str] | None:
+    def _build_semgrep_cmd(self, path: Path, files: list[str] | None = None) -> list[str] | None:
         """构建 Semgrep 命令."""
         # 验证路径合法性，防止路径遍历
         resolved_path = path.resolve()
@@ -200,7 +203,12 @@ class SecurityScanner(BaseScanner):
             for pattern in self.semgrep_config.exclude:
                 cmd.extend(["--exclude", pattern])
 
-        cmd.append(str(resolved_path))
+        # 如果指定了文件列表，只扫描这些文件
+        if files:
+            cmd.extend(files)
+        else:
+            cmd.append(str(resolved_path))
+
         return cmd
 
     def _parse_semgrep_results(self, result: dict[str, Any]) -> tuple[list[Finding], int]:
@@ -228,13 +236,14 @@ class SecurityScanner(BaseScanner):
     async def _run_semgrep(
         self,
         path: Path,
+        files: list[str] | None = None,
     ) -> tuple[list[Finding], int, list[str]]:
         """运行 Semgrep 扫描."""
         findings: list[Finding] = []
         errors: list[str] = []
         scanned_files = 0
 
-        cmd = self._build_semgrep_cmd(path)
+        cmd = self._build_semgrep_cmd(path, files)
         if cmd is None:
             errors.append(f"扫描路径不存在: {path}")
             return findings, 0, errors
@@ -303,7 +312,7 @@ class SecurityScanner(BaseScanner):
             logger.warning(f"解析 Semgrep 结果失败: {e}")
             return None
 
-    def _build_bandit_cmd(self, path: Path) -> list[str] | None:
+    def _build_bandit_cmd(self, path: Path, files: list[str] | None = None) -> list[str] | None:
         """构建 Bandit 命令."""
         resolved_path = path.resolve()
         if not resolved_path.exists():
@@ -326,7 +335,15 @@ class SecurityScanner(BaseScanner):
         if self.bandit_config.exclude_dirs:
             cmd.extend(["-x", ",".join(self.bandit_config.exclude_dirs)])
 
-        cmd.extend(["-r", str(resolved_path)])
+        # 如果指定了文件列表，使用 -r 扫描目录（Bandit 不支持单文件列表）
+        # 但我们可以通过 include 模式限制
+        if files:
+            # 对于增量扫描，我们仍然扫描整个目录
+            # 但结果会在后续过滤
+            cmd.extend(["-r", str(resolved_path)])
+        else:
+            cmd.extend(["-r", str(resolved_path)])
+
         return cmd
 
     def _parse_bandit_results(self, result: dict[str, Any]) -> tuple[list[Finding], int]:
@@ -348,13 +365,14 @@ class SecurityScanner(BaseScanner):
     async def _run_bandit(
         self,
         path: Path,
+        files: list[str] | None = None,
     ) -> tuple[list[Finding], int, list[str]]:
         """运行 Bandit 扫描."""
         findings: list[Finding] = []
         errors: list[str] = []
         scanned_files = 0
 
-        cmd = self._build_bandit_cmd(path)
+        cmd = self._build_bandit_cmd(path, files)
         if cmd is None:
             errors.append(f"扫描路径不存在: {path}")
             return findings, 0, errors
@@ -408,6 +426,10 @@ class SecurityScanner(BaseScanner):
 
             result = json.loads(json_str)
             findings, scanned_files = self._parse_bandit_results(result)
+
+            # 如果指定了文件列表，过滤结果只保留变更文件
+            if files:
+                findings = [f for f in findings if str(f.file_path) in files]
 
         except FileNotFoundError:
             errors.append("Bandit 未安装，请运行: pip install bandit[toml]")

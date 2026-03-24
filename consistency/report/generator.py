@@ -210,6 +210,239 @@ class ReportGenerator:
 
         return formatter.save(report, output_path)
 
+    def generate_github_annotations(
+        self,
+        scan_results: list[ScanResult],
+        max_annotations: int = 50,
+    ) -> list[dict[str, Any]]:
+        """生成 GitHub PR Annotations（行级评论）.
+
+        GitHub Actions 每个步骤支持最多 10 个警告注解和 10 个错误注解。
+
+        Args:
+            scan_results: 扫描结果列表
+            max_annotations: 最大注解数量
+
+        Returns:
+            注解字典列表
+        """
+        annotations: list[dict[str, Any]] = []
+
+        all_findings: list[Finding] = []
+        for result in scan_results:
+            all_findings.extend(result.findings)
+
+        # 按严重级别排序（critical/high 优先）
+        severity_order = {Severity.CRITICAL: 0, Severity.HIGH: 1, Severity.MEDIUM: 2, Severity.LOW: 3, Severity.INFO: 4}
+        sorted_findings = sorted(all_findings, key=lambda f: severity_order.get(f.severity, 5))
+
+        for finding in sorted_findings[:max_annotations]:
+            if not finding.file_path:
+                continue
+
+            line = finding.line or 0
+            if line <= 0:
+                continue
+
+            # 映射严重级别到 GitHub annotation level
+            level = self._severity_to_annotation_level(finding.severity)
+
+            annotation = {
+                "path": str(finding.file_path),
+                "start_line": finding.line,
+                "end_line": finding.line,
+                "annotation_level": level,
+                "message": f"[{finding.rule_id}] {finding.message}",
+                "title": finding.rule_id,
+            }
+
+            # 添加代码片段
+            if finding.code_snippet:
+                annotation["raw_details"] = finding.code_snippet[:500]
+
+            annotations.append(annotation)
+
+        return annotations
+
+    def generate_checks_output(
+        self,
+        scan_results: list[ScanResult],
+        ai_review: ReviewResult | None = None,
+        project_name: str = "Unknown",
+    ) -> dict[str, Any]:
+        """生成 GitHub Checks API 输出格式.
+
+        Args:
+            scan_results: 扫描结果列表
+            ai_review: AI 审查结果
+            project_name: 项目名称
+
+        Returns:
+            Checks API 输出字典
+        """
+        all_findings: list[Finding] = []
+        for result in scan_results:
+            all_findings.extend(result.findings)
+
+        severity_counts: dict[Severity, int] = dict.fromkeys(Severity, 0)
+        for finding in all_findings:
+            severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
+
+        # 构建摘要
+        summary_lines = [
+            f"## GitConsistency Security Scan - {project_name}",
+            "",
+            "### Summary",
+            f"- **Critical**: {severity_counts.get(Severity.CRITICAL, 0)}",
+            f"- **High**: {severity_counts.get(Severity.HIGH, 0)}",
+            f"- **Medium**: {severity_counts.get(Severity.MEDIUM, 0)}",
+            f"- **Low**: {severity_counts.get(Severity.LOW, 0)}",
+            f"- **Info**: {severity_counts.get(Severity.INFO, 0)}",
+            "",
+        ]
+
+        # 添加发现的问题详情
+        if all_findings:
+            summary_lines.append("### Findings")
+            summary_lines.append("")
+            for finding in all_findings[:30]:  # Checks 输出限制为 30 个
+                emoji = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢", "INFO": "🔵"}.get(
+                    finding.severity.value, "⚪"
+                )
+                location = f"`{finding.file_path}:{finding.line}`" if finding.file_path else ""
+                summary_lines.append(f"{emoji} **{finding.severity.value}** [{finding.rule_id}] {finding.message[:80]}")
+                if location:
+                    summary_lines.append(f"   Location: {location}")
+
+        # 确定结论
+        critical = severity_counts.get(Severity.CRITICAL, 0)
+        high = severity_counts.get(Severity.HIGH, 0)
+
+        if critical > 0:
+            title = f"❌ {critical} critical issues found"
+        elif high > 0:
+            title = f"⚠️ {high} high severity issues found"
+        else:
+            title = "✅ No critical issues found"
+
+        return {
+            "title": title,
+            "summary": "\n".join(summary_lines),
+            "annotations": self.generate_github_annotations(scan_results),
+        }
+
+    def generate_actions_summary(
+        self,
+        scan_results: list[ScanResult],
+        duration_ms: float,
+        ai_review: ReviewResult | None = None,
+        project_name: str = "Unknown",
+    ) -> str:
+        """生成 GitHub Actions Job Summary（用于 $GITHUB_STEP_SUMMARY）。
+
+        Args:
+            scan_results: 扫描结果列表
+            duration_ms: 扫描耗时（毫秒）
+            ai_review: AI 审查结果
+            project_name: 项目名称
+
+        Returns:
+            Markdown 摘要内容
+        """
+        all_findings: list[Finding] = []
+        for result in scan_results:
+            all_findings.extend(result.findings)
+
+        severity_counts: dict[Severity, int] = dict.fromkeys(Severity, 0)
+        for finding in all_findings:
+            severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
+
+        critical = severity_counts.get(Severity.CRITICAL, 0)
+        high = severity_counts.get(Severity.HIGH, 0)
+        medium = severity_counts.get(Severity.MEDIUM, 0)
+        low = severity_counts.get(Severity.LOW, 0)
+
+        # 确定整体状态
+        if critical > 0:
+            status_emoji = "❌"
+            status_text = "Failed"
+        elif high > 0:
+            status_emoji = "⚠️"
+            status_text = "Warning"
+        else:
+            status_emoji = "✅"
+            status_text = "Passed"
+
+        lines = [
+            f"# {status_emoji} GitConsistency Code Review",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            f"| **Project** | {project_name} |",
+            f"| **Status** | {status_text} |",
+            f"| **Duration** | {duration_ms:.0f}ms |",
+            "",
+            "## 📊 Results Summary",
+            "",
+            "| Severity | Count |",
+            "|----------|-------|",
+            f"| 🔴 Critical | {critical} |",
+            f"| 🟠 High | {high} |",
+            f"| 🟡 Medium | {medium} |",
+            f"| 🟢 Low | {low} |",
+            f"| 🔵 Info | {severity_counts.get(Severity.INFO, 0)} |",
+            "",
+        ]
+
+        # 添加发现的问题表格
+        if all_findings:
+            lines.extend([
+                "## 🔍 Findings",
+                "",
+                "| File | Line | Severity | Rule | Message |",
+                "|------|------|----------|------|---------|",
+            ])
+
+            for finding in all_findings[:20]:  # 摘要限制为 20 个
+                file_str = str(finding.file_path) if finding.file_path else "-"
+                line_val = finding.line or 0
+                line_str = str(line_val) if line_val > 0 else "-"
+                emoji = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢", "INFO": "🔵"}.get(
+                    finding.severity.value, "⚪"
+                )
+                msg = finding.message[:50] + "..." if len(finding.message) > 50 else finding.message
+                lines.append(
+                    f"| {file_str} | {line_str} | {emoji} {finding.severity.value} | "
+                    f"{finding.rule_id} | {msg} |"
+                )
+
+            if len(all_findings) > 20:
+                lines.append(f"\n*... and {len(all_findings) - 20} more findings*")
+
+            lines.append("")
+
+        # 添加 AI 审查部分
+        if ai_review:
+            lines.extend([
+                "## 🤖 AI Review",
+                "",
+                ai_review.summary,
+                "",
+            ])
+
+        return "\n".join(lines)
+
+    def _severity_to_annotation_level(self, severity: Severity) -> str:
+        """转换严重级别到 GitHub annotation level。"""
+        mapping = {
+            Severity.CRITICAL: "failure",
+            Severity.HIGH: "failure",
+            Severity.MEDIUM: "warning",
+            Severity.LOW: "notice",
+            Severity.INFO: "notice",
+        }
+        return mapping.get(severity, "notice")
+
     def _get_status_emoji(self, counts: dict[Severity, int]) -> str:
         """获取状态图标."""
         if counts.get(Severity.CRITICAL, 0) > 0:

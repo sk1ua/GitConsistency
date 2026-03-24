@@ -11,7 +11,14 @@ from consistency.core.gitnexus_client import (
     GitNexusQueryResult,
     get_gitnexus_client,
 )
+from consistency.core.metrics import MetricsCollector, ScanMetrics
 from consistency.core.schema import ContextResult
+from consistency.core.self_hosted import (
+    SelfHostedConfig,
+    detect_runner_capabilities,
+    is_self_hosted_runner,
+    optimize_for_self_hosted,
+)
 
 __all__ = [
     "ContextResult",
@@ -21,4 +28,12 @@ __all__ = [
     "GitNexusError",
     "GitNexusQueryResult",
     "get_gitnexus_client",
+    # Metrics
+    "MetricsCollector",
+    "ScanMetrics",
+    # Self-hosted
+    "SelfHostedConfig",
+    "detect_runner_capabilities",
+    "is_self_hosted_runner",
+    "optimize_for_self_hosted",
 ]
