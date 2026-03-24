@@ -97,12 +97,12 @@ jobs:
       # 安装 GitConsistency
       # -----------------------------------------------------------------------
       - name: Install GitConsistency
+        env:
+          UV_SYSTEM_PYTHON: 1
         run: |
-          # 使用系统 pip 先安装 setuptools（semgrep 依赖 pkg_resources）
+          # 使用系统 Python 安装所有依赖（避免 uv venv 隔离导致 pkg_resources 不可用）
           pip install setuptools
-          uv venv --system-site-packages
-          # 再安装项目及其依赖
-          uv pip install -e ".[full]"
+          uv pip install --system setuptools -e ".[full]"
 
       # -----------------------------------------------------------------------
       # 缓存模型和数据
@@ -152,14 +152,15 @@ jobs:
             SKIP_AI="--skip-ai"
           fi
           
+          # 使用系统 Python 运行（避免 uv run 隔离环境问题）
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-            uv run gitconsistency ci \
+            gitconsistency ci \
               --event pull_request \
               --pr "$GITHUB_PR_NUMBER" \
               $SKIP_AI \
               $DRY_RUN_FLAG
           else
-            uv run gitconsistency analyze "$PROJECT_PATH" \
+            gitconsistency analyze "$PROJECT_PATH" \
               $SKIP_AI \
               --format markdown \
               --output report.md
@@ -212,23 +213,24 @@ jobs:
           enable-cache: false
 
       - name: Install dev dependencies
+        env:
+          UV_SYSTEM_PYTHON: 1
         run: |
           pip install setuptools
-          uv venv --system-site-packages
-          uv pip install -e ".[dev,full]" --no-cache
+          uv pip install --system setuptools -e ".[dev,full]" --no-cache
 
       - name: Ruff check
         run: |
           # Only check critical errors (E, F, W), ignore style/doc issues
-          uv run ruff check consistency/ --select E,W,F
+          ruff check consistency/ --select E,W,F
 
       - name: Ruff format check
         run: |
-          uv run ruff format --check consistency/
+          ruff format --check consistency/
 
       - name: MyPy type check
         run: |
-          uv run mypy consistency/
+          mypy consistency/
 
   # ===========================================================================
   # 测试
@@ -255,14 +257,15 @@ jobs:
           enable-cache: false
 
       - name: Install dependencies
+        env:
+          UV_SYSTEM_PYTHON: 1
         run: |
           pip install setuptools
-          uv venv --system-site-packages
-          uv pip install -e ".[dev,full]" --no-cache
+          uv pip install --system setuptools -e ".[dev,full]" --no-cache
 
       - name: Run tests with coverage
         run: |
-          uv run pytest tests/ -v --ignore=tests/integration --cov=consistency --cov-report=xml --cov-fail-under=40
+          pytest tests/ -v --ignore=tests/integration --cov=consistency --cov-report=xml --cov-fail-under=40
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
