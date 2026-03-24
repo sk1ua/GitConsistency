@@ -77,7 +77,7 @@ repos:
     rev: v2.2.6
     hooks:
       - id: codespell
-        args: [--write-changes, --skip="*.lock,*.json"]
+        args: [--write-changes, "--skip=*.lock,*.json"]
         stages: [pre-commit]
 
   # ==================== GitConsistency 自身 ====================
@@ -92,3 +92,15 @@ repos:
         always_run: true
         stages: [pre-push]
         verbose: true
+
+  # ==================== 测试运行 ====================
+  - repo: local
+    hooks:
+      - id: pytest
+        name: Run pytest with coverage
+        entry: bash -c "pip install pytest-cov pytest-xdist -q && pytest tests/ -v --ignore=tests/integration --ignore=tests/e2e --ignore=tests/unit/test_main.py --cov=consistency --cov-report=term-missing --cov-fail-under=30"
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
