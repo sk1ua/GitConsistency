@@ -97,12 +97,10 @@ jobs:
       # 安装 GitConsistency
       # -----------------------------------------------------------------------
       - name: Install GitConsistency
-        env:
-          UV_SYSTEM_PYTHON: 1
         run: |
-          # 使用系统 Python 安装所有依赖（避免 uv venv 隔离导致 pkg_resources 不可用）
-          pip install setuptools
-          uv pip install --system setuptools -e ".[full]"
+          # 使用 pip 而非 uv，确保 setuptools 正确安装
+          pip install setuptools wheel
+          pip install -e ".[full]"
 
       # -----------------------------------------------------------------------
       # 缓存模型和数据
@@ -213,11 +211,9 @@ jobs:
           enable-cache: false
 
       - name: Install dev dependencies
-        env:
-          UV_SYSTEM_PYTHON: 1
         run: |
-          pip install setuptools
-          uv pip install --system setuptools -e ".[dev,full]" --no-cache
+          pip install setuptools wheel
+          pip install -e ".[dev,full]" --no-cache
 
       - name: Ruff check
         run: |
@@ -257,11 +253,9 @@ jobs:
           enable-cache: false
 
       - name: Install dependencies
-        env:
-          UV_SYSTEM_PYTHON: 1
         run: |
-          pip install setuptools
-          uv pip install --system setuptools -e ".[dev,full]" --no-cache
+          pip install setuptools wheel
+          pip install -e ".[dev,full]" --no-cache
 
       - name: Run tests with coverage
         run: |
