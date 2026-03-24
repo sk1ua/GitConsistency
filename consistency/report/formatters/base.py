@@ -5,12 +5,11 @@ from __future__ import annotations
 import json
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from consistency import __version__
-from consistency.report.templates import ReportFormat, ReportTheme
+from consistency.report.templates import ReportTheme
 from consistency.reviewer.models import ReviewResult
 from consistency.scanners.base import Finding, ScanResult, Severity
 

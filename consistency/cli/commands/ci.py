@@ -10,7 +10,6 @@ from rich.panel import Panel
 
 from consistency.cli.banner import print_banner
 from consistency.cli.utils import get_git_commit_sha
-from consistency.config import get_settings
 from consistency.exceptions import GitConsistencyError, GitHubError
 from consistency.github import GitHubIntegration
 from consistency.report.generator import ReportGenerator
@@ -19,6 +18,8 @@ from consistency.scanners.orchestrator import ScannerOrchestrator
 if TYPE_CHECKING:
     import typer
     from rich.console import Console
+
+    from consistency.config import Settings
 
 
 def register_ci_command(app: "typer.Typer", console: "Console") -> None:
@@ -124,8 +125,6 @@ async def _run_analysis(
     settings: "Settings",
 ) -> dict:
     """运行分析."""
-    from typing import Any
-
     orchestrator = ScannerOrchestrator(settings)
 
     report = await orchestrator.scan(path, skip_security=skip_security)

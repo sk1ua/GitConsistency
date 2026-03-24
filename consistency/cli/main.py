@@ -12,7 +12,6 @@ from rich.console import Console
 from rich.panel import Panel
 
 from consistency import __version__
-from consistency.cli.banner import print_banner
 from consistency.cli.commands.analyze import register_analyze_command
 from consistency.cli.commands.ci import register_ci_command
 from consistency.cli.commands.config_cmd import register_config_commands

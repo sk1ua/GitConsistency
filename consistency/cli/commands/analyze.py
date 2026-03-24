@@ -70,6 +70,7 @@ def _run_analyze_command(
                 skip_security=skip_security,
                 skip_ai=skip_ai,
                 settings=settings,
+                console=console,
             )
         )
 
@@ -122,6 +123,7 @@ async def _run_analysis(
     skip_security: bool,
     skip_ai: bool,
     settings: Settings,
+    console: Console,
 ) -> dict[str, Any]:
     """运行分析."""
     orchestrator = ScannerOrchestrator(settings)
@@ -167,8 +169,6 @@ async def _run_analysis(
 
 def _print_summary(result: dict[str, Any], console: Console) -> None:
     """打印分析摘要."""
-    from consistency.reviewer.models import Severity
-
     scan_errors = list(result.get("errors", []))
     for scan_result in result.get("results", {}).values():
         scan_errors.extend(getattr(scan_result, "errors", []))

@@ -7,7 +7,7 @@ from typing import Any
 
 from consistency.report.formatters.base import BaseFormatter
 from consistency.reviewer.models import ReviewResult
-from consistency.scanners.base import ScanResult, Severity
+from consistency.scanners.base import ScanResult
 
 
 class JsonFormatter(BaseFormatter):

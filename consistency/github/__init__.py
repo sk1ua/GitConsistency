@@ -10,6 +10,8 @@ Examples:
 
 from __future__ import annotations
 
+from typing import Any
+
 from consistency.github.client import GitHubClient
 from consistency.github.comments import CommentManager, PRComment
 from consistency.github.checks import CheckManager, PRInfo
