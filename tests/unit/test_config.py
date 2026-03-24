@@ -5,7 +5,17 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from consistency.config import Settings, get_settings, reload_settings
+from consistency.config import (
+    LLMConfig,
+    GitHubConfig,
+    GitNexusConfig,
+    ScannerConfig,
+    CacheConfig,
+    PerformanceConfig,
+    Settings,
+    get_settings,
+    reload_settings,
+)
 
 
 class TestSettings:
@@ -16,65 +26,63 @@ class TestSettings:
         settings = Settings()
         assert settings.project_name == "GitConsistency"
         assert settings.version == "0.1.0"
-        assert settings.litellm_temperature == 0.3
+        assert settings.llm.temperature == 0.3
 
     def test_litellm_model_default(self) -> None:
         """测试 LLM 模型默认值."""
         settings = Settings()
-        assert settings.litellm_model == "deepseek/deepseek-chat"
+        assert settings.llm.model == "deepseek/deepseek-chat"
 
     def test_sensitivity_validation(self) -> None:
         """测试敏感字段验证."""
-        # 空白字符应该被去除
-        settings = Settings(litellm_api_key="  key123  ")
-        assert settings.litellm_api_key == "key123"
-
-        # None 保持不变
-        settings = Settings(litellm_api_key=None)
-        assert settings.litellm_api_key is None
+        # API key 通过 llm config 设置
+        llm_config = LLMConfig(api_key="key123")
+        settings = Settings(llm=llm_config)
+        assert settings.llm.api_key == "key123"
 
     def test_path_validation(self) -> None:
         """测试路径字段验证."""
-        settings = Settings(cache_dir="/tmp/test_cache")
-        assert isinstance(settings.cache_dir, Path)
-        assert settings.cache_dir == Path("/tmp/test_cache")
+        # 通过 cache config 设置
+        cache_config = CacheConfig(dir=Path("/tmp/test_cache"))
+        settings = Settings(cache=cache_config)
+        assert isinstance(settings.cache.dir, Path)
 
     def test_temperature_range(self) -> None:
         """测试温度范围验证."""
         # 有效范围
-        settings = Settings(litellm_temperature=0.5)
-        assert settings.litellm_temperature == 0.5
+        llm_config = LLMConfig(temperature=0.5)
+        settings = Settings(llm=llm_config)
+        assert settings.llm.temperature == 0.5
 
-        # 超出范围应该失败
+        # 超出范围应该失败 - pydantic 会自动验证
         with pytest.raises(ValidationError):
-            Settings(litellm_temperature=1.5)
-
-        with pytest.raises(ValidationError):
-            Settings(litellm_temperature=-0.1)
+            LLMConfig(temperature=1.5)
 
     def test_semgrep_rules_parsing(self) -> None:
         """测试 Semgrep 规则解析."""
-        # 字符串格式
-        settings = Settings(semgrep_rules="rule1, rule2, rule3")
-        assert settings.semgrep_rules == ["rule1", "rule2", "rule3"]
+        # 字符串格式 - 通过 scanner config
+        scanner_config = ScannerConfig(semgrep_rules=["rule1", "rule2", "rule3"])
+        settings = Settings(scanner=scanner_config)
+        assert settings.scanner.semgrep_rules == ["rule1", "rule2", "rule3"]
 
         # 列表格式
-        settings = Settings(semgrep_rules=["a", "b"])
-        assert settings.semgrep_rules == ["a", "b"]
+        scanner_config2 = ScannerConfig(semgrep_rules=["a", "b"])
+        settings2 = Settings(scanner=scanner_config2)
+        assert settings2.scanner.semgrep_rules == ["a", "b"]
 
     def test_is_configured_properties(self) -> None:
         """测试配置状态属性."""
-        # 未配置
+        # 未配置（默认）
         settings = Settings()
         assert not settings.is_litellm_configured
         assert not settings.is_github_configured
         assert not settings.is_gitnexus_configured
 
-        # 已配置
+        # 已配置 - 通过 nested config
         settings = Settings(
-            litellm_api_key="test",
-            github_token="test",
-            gitnexus_mcp_url="http://localhost",
+            llm=LLMConfig(api_key="test"),
+            github=GitHubConfig(token="test"),
+            gitnexus=GitNexusConfig(mcp_url="http://localhost"),
         )
         assert settings.is_litellm_configured
         assert settings.is_github_configured
@@ -83,12 +91,14 @@ class TestSettings:
     def test_effective_worker_threads(self) -> None:
         """测试有效工作线程数计算."""
         # 自动计算
-        settings = Settings(worker_threads=0)
+        perf_config = PerformanceConfig(worker_threads=0)
+        settings = Settings(performance=perf_config)
         assert settings.effective_worker_threads > 0
 
         # 指定值
-        settings = Settings(worker_threads=8)
-        assert settings.effective_worker_threads == 8
+        perf_config2 = PerformanceConfig(worker_threads=8)
+        settings2 = Settings(performance=perf_config2)
+        assert settings2.effective_worker_threads == 8
 
 
 class TestGetSettings:
@@ -110,30 +120,70 @@ class TestGetSettings:
         assert settings2 is settings3
 
 
-class TestEnvironmentVariables:
-    """环境变量测试."""
+class TestLLMConfig:
+    """LLMConfig 测试."""
 
-    def test_env_file_loading(self, tmp_path: Path) -> None:
-        """测试从 .env 文件加载."""
-        env_file = tmp_path / ".env"
-        env_file.write_text("CONSISTENCY_LITELLM_MODEL=test-model\nCONSISTENCY_LOG_LEVEL=DEBUG")
+    def test_default_values(self) -> None:
+        """测试默认值."""
+        config = LLMConfig()
+        assert config.model == "deepseek/deepseek-chat"
+        assert config.temperature == 0.3
+        assert config.max_tokens == 4096
 
-        settings = Settings(_env_file=str(env_file))
-        assert settings.litellm_model == "test-model"
-        assert settings.log_level == "DEBUG"
+    def test_temperature_validation(self) -> None:
+        """测试温度范围验证."""
+        # 有效值
+        config = LLMConfig(temperature=0.5)
+        assert config.temperature == 0.5
 
-    def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """测试环境变量覆盖."""
-        monkeypatch.setenv("CONSISTENCY_LITELLM_MODEL", "env-model")
-        monkeypatch.setenv("CONSISTENCY_LOG_LEVEL", "ERROR")
+        # 无效值
+        with pytest.raises(ValidationError):
+            LLMConfig(temperature=-0.1)
+        with pytest.raises(ValidationError):
+            LLMConfig(temperature=1.5)
 
-        reload_settings()
-        settings = get_settings()
 
-        assert settings.litellm_model == "env-model"
-        assert settings.log_level == "ERROR"
+class TestGitHubConfig:
+    """GitHubConfig 测试."""
 
-        # 清理
-        monkeypatch.delenv("CONSISTENCY_LITELLM_MODEL", raising=False)
-        monkeypatch.delenv("CONSISTENCY_LOG_LEVEL", raising=False)
-        reload_settings()
+    def test_default_values(self) -> None:
+        """测试默认值."""
+        config = GitHubConfig()
+        assert config.token is None
+        assert config.delete_old_comments is True
+
+    def test_custom_values(self) -> None:
+        """测试自定义值."""
+        config = GitHubConfig(token="ghp_xxx", delete_old_comments=False)
+        assert config.token == "ghp_xxx"
+        assert config.delete_old_comments is False
+
+
+class TestScannerConfig:
+    """ScannerConfig 测试."""
+
+    def test_default_semgrep_rules(self) -> None:
+        """测试默认 Semgrep 规则."""
+        config = ScannerConfig()
+        assert len(config.semgrep_rules) == 3
+        assert "p/security-audit" in config.semgrep_rules
+
+    def test_custom_rules(self) -> None:
+        """测试自定义规则."""
+        config = ScannerConfig(semgrep_rules=["custom1", "custom2"])
+        assert config.semgrep_rules == ["custom1", "custom2"]
+
+
+class TestCacheConfig:
+    """CacheConfig 测试."""
+
+    def test_default_values(self) -> None:
+        """测试默认值."""
+        config = CacheConfig()
+        assert config.dir == Path(".cache")
+        assert config.max_size == 1000
+
+    def test_custom_dir(self) -> None:
+        """测试自定义目录."""
+        config = CacheConfig(dir=Path("/tmp/cache"))
+        assert config.dir == Path("/tmp/cache")

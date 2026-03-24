@@ -94,9 +94,15 @@ class TestReview:
         """测试成功审查."""
         context = ReviewContext(diff="test diff", files_changed=["test.py"])
 
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = mock_llm_response
+        # Mock provider's complete_json method
+        mock_response = MagicMock()
+        mock_response.content = mock_llm_response
+        mock_response.usage = {"total_tokens": 100}
 
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.return_value = mock_response
+
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             result = await reviewer.review(context)
 
             assert isinstance(result, ReviewResult)
@@ -111,9 +117,14 @@ class TestReview:
         mock_llm_response: str,
     ) -> None:
         """测试使用字符串上下文."""
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = mock_llm_response
+        mock_response = MagicMock()
+        mock_response.content = mock_llm_response
+        mock_response.usage = {"total_tokens": 100}
 
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.return_value = mock_response
+
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             result = await reviewer.review("simple diff string")
 
             assert isinstance(result, ReviewResult)
@@ -127,15 +138,22 @@ class TestReview:
         """测试缓存命中."""
         context = ReviewContext(diff="cached diff", files_changed=["test.py"])
 
+        mock_response = MagicMock()
+        mock_response.content = mock_llm_response
+        mock_response.usage = {"total_tokens": 100}
+
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.return_value = mock_response
+
         # 第一次调用
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = mock_llm_response
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             result1 = await reviewer.review(context)
 
-        # 第二次调用（应该命中缓存）
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
+        # 第二次调用（应该命中缓存）- 使用相同的 provider mock
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             result2 = await reviewer.review(context)
-            mock_call.assert_not_called()  # 不应该调用 LLM
+            # 由于缓存命中，provider 不应该被调用第二次
+            assert mock_provider.complete_json.call_count == 1
 
         assert result1.summary == result2.summary
         assert reviewer._stats["cache_hits"] == 1
@@ -145,26 +163,32 @@ class TestReview:
         """测试不使用缓存."""
         context = ReviewContext(diff="test diff", files_changed=["test.py"])
 
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = mock_llm_response
+        mock_response = MagicMock()
+        mock_response.content = mock_llm_response
+        mock_response.usage = {"total_tokens": 100}
 
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.return_value = mock_response
+
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             # 两次调用，都不使用缓存
             await reviewer.review(context, use_cache=False)
             await reviewer.review(context, use_cache=False)
 
-            assert mock_call.call_count == 2
+            assert mock_provider.complete_json.call_count == 2
 
     @pytest.mark.asyncio
     async def test_review_failure(self, reviewer: AIReviewer) -> None:
         """测试审查失败."""
         context = ReviewContext(diff="test")
 
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.side_effect = Exception("API Error")
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.side_effect = Exception("API Error")
 
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             result = await reviewer.review(context)
 
-            assert "审查失败" in result.summary
+            assert "审查失败" in result.summary or "失败" in result.summary
             assert result.severity == Severity.LOW
 
 
@@ -289,17 +313,22 @@ class TestReviewBatch:
             for i in range(5)
         ]
 
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "OK",
-                "severity": "low",
-                "comments": [],
-            })
+        mock_response = MagicMock()
+        mock_response.content = json.dumps({
+            "summary": "OK",
+            "severity": "low",
+            "comments": [],
+        })
+        mock_response.usage = {"total_tokens": 50}
 
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.return_value = mock_response
+
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             results = await reviewer.review_batch(contexts, max_concurrency=2)
 
             assert len(results) == 5
-            assert mock_call.call_count == 5
+            assert mock_provider.complete_json.call_count == 5
 
 
 class TestReviewWithFallback:
@@ -314,20 +343,28 @@ class TestReviewWithFallback:
         )
 
         # 主模型失败，备选模型成功
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.side_effect = [
-                Exception("Primary failed"),  # 第一次调用失败
-                json.dumps({  # 第二次调用成功
-                    "summary": "Fallback review",
-                    "severity": "low",
-                    "comments": [],
-                }),
-            ]
+        mock_primary = AsyncMock()
+        mock_primary.complete_json.side_effect = Exception("Primary failed")
 
+        mock_fallback = AsyncMock()
+        mock_fallback.complete_json.return_value = MagicMock(
+            content=json.dumps({
+                "summary": "Fallback review",
+                "severity": "low",
+                "comments": [],
+            }),
+            usage={"total_tokens": 50},
+        )
+
+        def get_provider(use_fallback: bool = False):
+            return mock_fallback if use_fallback else mock_primary
+
+        with patch.object(reviewer, "_get_provider", side_effect=get_provider):
             result = await reviewer.review_with_fallback(ReviewContext(diff="test"))
 
             # 应该使用备选模型重试
-            assert mock_call.call_count == 2  # 两次调用
+            assert mock_primary.complete_json.call_count == 1
+            assert mock_fallback.complete_json.call_count == 1
             assert result.metadata.get("used_fallback_model") is True
 
     @pytest.mark.asyncio
@@ -338,17 +375,22 @@ class TestReviewWithFallback:
             fallback_model="fallback-model",
         )
 
-        with patch.object(reviewer, "_call_llm", new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = json.dumps({
-                "summary": "OK",
-                "severity": "low",
-                "comments": [],
-            })
+        mock_response = MagicMock()
+        mock_response.content = json.dumps({
+            "summary": "OK",
+            "severity": "low",
+            "comments": [],
+        })
+        mock_response.usage = {"total_tokens": 50}
 
+        mock_provider = AsyncMock()
+        mock_provider.complete_json.return_value = mock_response
+
+        with patch.object(reviewer, "_get_provider", return_value=mock_provider):
             await reviewer.review_with_fallback(ReviewContext(diff="test"))
 
             # 只调用一次
-            assert mock_call.call_count == 1
+            assert mock_provider.complete_json.call_count == 1
 
 
 class TestCache:

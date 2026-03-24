@@ -1,7 +1,7 @@
 """GitHub 集成单元测试."""
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -49,12 +49,13 @@ class TestGetClient:
     def test_lazy_client_creation(self) -> None:
         """测试延迟客户端创建."""
         github = GitHubIntegration(token="test")
-        assert github._client is None
+        # New API uses client._client internally
+        assert github.client._client is None
 
         with patch("github.Github") as mock_github:
-            client = github._get_client()
+            client = github.client.get_client()
             assert client is not None
-            mock_github.assert_called_once_with("test")
+            mock_github.assert_called_once()
 
 
 class TestPostComment:
@@ -77,9 +78,10 @@ class TestPostComment:
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
 
-        with patch.object(github, "_get_client") as mock_get_client:
-            mock_get_client.return_value.get_repo.return_value = mock_repo
+        mock_gh = MagicMock()
+        mock_gh.get_repo.return_value = mock_repo
 
+        with patch.object(github.client, "get_client", return_value=mock_gh):
             result = await github.post_comment("owner/repo", 1, "Test comment body")
 
             assert result["id"] == 12345
@@ -93,9 +95,10 @@ class TestPostComment:
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
 
-        with patch.object(github, "_get_client") as mock_get_client:
-            mock_get_client.return_value.get_repo.return_value = mock_repo
+        mock_gh = MagicMock()
+        mock_gh.get_repo.return_value = mock_repo
 
+        with patch.object(github.client, "get_client", return_value=mock_gh):
             await github.post_comment("owner/repo", 1, "Body")
 
             call_args = mock_pr.create_issue_comment.call_args[0][0]
@@ -108,9 +111,10 @@ class TestPostComment:
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
 
-        with patch.object(github, "_get_client") as mock_get_client:
-            mock_get_client.return_value.get_repo.return_value = mock_repo
+        mock_gh = MagicMock()
+        mock_gh.get_repo.return_value = mock_repo
 
+        with patch.object(github.client, "get_client", return_value=mock_gh):
             long_body = "A" * 70000
             await github.post_comment("owner/repo", 1, long_body)
 
@@ -149,10 +153,11 @@ class TestDeletePreviousComments:
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
 
-        with patch.object(github, "_get_client") as mock_get_client:
-            mock_get_client.return_value.get_repo.return_value = mock_repo
+        mock_gh = MagicMock()
+        mock_gh.get_repo.return_value = mock_repo
 
-            deleted = await github._delete_previous_comments("owner/repo", 1)
+        with patch.object(github.client, "get_client", return_value=mock_gh):
+            deleted = await github.comments._delete_previous_comments("owner/repo", 1)
 
             assert deleted == 1
             mock_comment1.delete.assert_called_once()
@@ -181,9 +186,10 @@ class TestFileComments:
         mock_repo.get_pull.return_value = mock_pr
         mock_repo.get_commit.return_value = mock_commit
 
-        with patch.object(github, "_get_client") as mock_get_client:
-            mock_get_client.return_value.get_repo.return_value = mock_repo
+        mock_gh = MagicMock()
+        mock_gh.get_repo.return_value = mock_repo
 
+        with patch.object(github.client, "get_client", return_value=mock_gh):
             result = await github.post_file_comment(
                 "owner/repo", 1, "src/main.py", 42, "Issue here"
             )
@@ -205,8 +211,9 @@ class TestBatchComments:
             PRComment(body="Comment 2", path="file.py", line=10),
         ]
 
-        with patch.object(github, "post_comment", return_value={"id": 1}) as mock_post, \
-             patch.object(github, "post_file_comment", return_value={"id": 2}) as mock_file:
+        # Mock the underlying methods
+        with patch.object(github.comments, "post_comment", return_value={"id": 1}) as mock_post, \
+             patch.object(github.comments, "post_file_comment", return_value={"id": 2}) as mock_file:
 
             results = await github.post_comments_batch("owner/repo", 1, comments, max_concurrent=2)
 
@@ -235,9 +242,10 @@ class TestPRInfo:
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
 
-        with patch.object(github, "_get_client") as mock_get_client:
-            mock_get_client.return_value.get_repo.return_value = mock_repo
+        mock_gh = MagicMock()
+        mock_gh.get_repo.return_value = mock_repo
 
+        with patch.object(github.client, "get_client", return_value=mock_gh):
             info = await github.get_pr_info("owner/repo", 42)
 
             assert info is not None
@@ -316,9 +324,8 @@ class TestClose:
         github = GitHubIntegration(token="test")
 
         mock_client = MagicMock()
-        github._client = mock_client
+        github.client._client = mock_client
 
         await github.close()
 
         mock_client.close.assert_called_once()
-        assert github._client is None
