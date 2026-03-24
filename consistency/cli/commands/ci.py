@@ -163,8 +163,8 @@ async def _run_analysis(
 
         # 对发现的文件进行 Agent 审查
         all_findings = []
-        for r in report.results.values():
-            all_findings.extend(r.findings)
+        for scan_res in report.results.values():
+            all_findings.extend(scan_res.findings)
 
         # 获取唯一文件列表
         files_to_review = list(set(str(f.file_path) for f in all_findings if f.file_path))
@@ -190,18 +190,18 @@ async def _run_analysis(
 
                 all_comments = []
                 summaries = []
-                for r in agent_results:
-                    all_comments.extend(r.comments)
-                    summaries.append(r.summary)
+                for ar in agent_results:
+                    all_comments.extend(ar.comments)
+                    summaries.append(ar.summary)
 
                 # 确定最高严重级别
                 max_severity = Severity.LOW
-                for r in agent_results:
-                    if r.severity.value == "CRITICAL":
+                for ar in agent_results:
+                    if ar.severity.value == "CRITICAL":
                         max_severity = Severity.CRITICAL
-                    elif r.severity.value == "HIGH" and max_severity.value != "CRITICAL":
+                    elif ar.severity.value == "HIGH" and max_severity.value != "CRITICAL":
                         max_severity = Severity.HIGH
-                    elif r.severity.value == "MEDIUM" and max_severity.value in ("LOW", "INFO"):
+                    elif ar.severity.value == "MEDIUM" and max_severity.value in ("LOW", "INFO"):
                         max_severity = Severity.MEDIUM
 
                 ai_review = ReviewResult(
@@ -224,8 +224,8 @@ async def _run_analysis(
         reviewer = AIReviewer()
 
         all_findings = []
-        for r in report.results.values():
-            all_findings.extend(r.findings)
+        for scan_result in report.results.values():
+            all_findings.extend(scan_result.findings)
 
         context = ReviewContext(
             diff="",
@@ -259,8 +259,8 @@ def _print_summary(result: dict[str, Any], console: Console) -> None:
             console.print(f"[red]- {err}[/red]")
 
     all_findings = []
-    for r in result["results"].values():
-        all_findings.extend(r.findings)
+    for scan_r in result["results"].values():
+        all_findings.extend(scan_r.findings)
 
     if not all_findings:
         if scan_errors:
