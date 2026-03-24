@@ -388,12 +388,25 @@ class SecurityScanner(BaseScanner):
                     logger.warning(f"Bandit: {stderr_str}")
                 return findings, 0, errors
 
-            # 检查是否是有效的 JSON（以 { 开头）
-            if not stdout_str.startswith('{'):
-                logger.warning(f"Bandit 输出不是 JSON 格式: {stdout_str[:100]}")
+            # Bandit 输出可能包含 Rich 进度条前缀（如 "Working... ━━ 100%"），需要提取 JSON
+            # 找到 JSON 开始的 { 位置
+            json_start = stdout_str.find("{")
+            if json_start == -1:
+                logger.warning(f"Bandit 输出中没有找到 JSON: {stdout_str[:100]}")
                 return findings, 0, errors
 
-            result = json.loads(stdout_str)
+            # 提取 JSON 部分
+            json_str = stdout_str[json_start:]
+
+            # 找到最后一个 } 以确保 JSON 完整
+            json_end = json_str.rfind("}")
+            if json_end == -1:
+                logger.warning(f"Bandit JSON 不完整: {json_str[:100]}")
+                return findings, 0, errors
+
+            json_str = json_str[: json_end + 1]
+
+            result = json.loads(json_str)
             findings, scanned_files = self._parse_bandit_results(result)
 
         except FileNotFoundError:
