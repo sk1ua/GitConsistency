@@ -90,9 +90,9 @@ dev = [
 ]
 
 [project.scripts]
-gitconsistency = "consistency.main:app"
-gccy = "consistency.main:app"
-ccy = "consistency.main:app"  # 向后兼容
+gitconsistency = "consistency.cli.main:app"
+gccy = "consistency.cli.main:app"
+ccy = "consistency.cli.main:app"  # 向后兼容
 
 [project.urls]
 Homepage = "https://github.com/sk1ua/GitConsistency"
