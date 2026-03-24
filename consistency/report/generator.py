@@ -130,7 +130,7 @@ class ReportGenerator:
 
             # 统计各 Agent 的结果
             total_agent_comments = sum(len(r.comments) for r in agent_reviews)
-            lines.append(f"启用 **SecurityAgent**、**LogicAgent**、**StyleAgent** 并行审查")
+            lines.append("启用 **SecurityAgent**、**LogicAgent**、**StyleAgent** 并行审查")
             lines.append(f"- 审查文件数: {len(agent_reviews)}")
             lines.append(f"- Agent 发现问题: {total_agent_comments}")
             lines.append("")

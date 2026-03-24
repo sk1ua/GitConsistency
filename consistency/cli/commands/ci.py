@@ -86,6 +86,7 @@ def _run_ci_command(
                 skip_ai=skip_ai,
                 use_agents=use_agents,
                 settings=settings,
+                console=console,
             )
         )
 
@@ -128,6 +129,7 @@ async def _run_analysis(
     skip_ai: bool,
     use_agents: bool,
     settings: Settings,
+    console: Console,
 ) -> dict[str, Any]:
     """运行分析."""
     orchestrator = ScannerOrchestrator(settings)
