@@ -240,29 +240,35 @@ def format_metrics_for_summary(metrics: ScanMetrics) -> str:
     if metrics.lines_of_code > 0:
         lines.append(f"| Lines of Code | {metrics.lines_of_code:,} |")
 
-    lines.extend([
-        f"| Critical Issues | {metrics.issues_critical} |",
-        f"| High Issues | {metrics.issues_high} |",
-        f"| Medium Issues | {metrics.issues_medium} |",
-        f"| Cache Hit Rate | {metrics.cache_hit_rate:.1%} |",
-    ])
+    lines.extend(
+        [
+            f"| Critical Issues | {metrics.issues_critical} |",
+            f"| High Issues | {metrics.issues_high} |",
+            f"| Medium Issues | {metrics.issues_medium} |",
+            f"| Cache Hit Rate | {metrics.cache_hit_rate:.1%} |",
+        ]
+    )
 
     if metrics.ai_review_enabled:
-        lines.extend([
-            "",
-            "### 🤖 AI Review Metrics",
-            f"- Duration: {metrics.ai_review_duration_ms:.0f}ms",
-        ])
+        lines.extend(
+            [
+                "",
+                "### 🤖 AI Review Metrics",
+                f"- Duration: {metrics.ai_review_duration_ms:.0f}ms",
+            ]
+        )
         if metrics.llm_tokens_used > 0:
             lines.append(f"- Tokens Used: {metrics.llm_tokens_used:,}")
         if metrics.llm_model:
             lines.append(f"- Model: `{metrics.llm_model}`")
 
     if metrics.agents_used:
-        lines.extend([
-            "",
-            f"### 🎯 Agents Used ({len(metrics.agents_used)})",
-        ])
+        lines.extend(
+            [
+                "",
+                f"### 🎯 Agents Used ({len(metrics.agents_used)})",
+            ]
+        )
         for agent in metrics.agents_used:
             lines.append(f"- {agent}")
 

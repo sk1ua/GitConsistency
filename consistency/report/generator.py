@@ -396,12 +396,14 @@ class ReportGenerator:
 
         # 添加发现的问题表格
         if all_findings:
-            lines.extend([
-                "## 🔍 Findings",
-                "",
-                "| File | Line | Severity | Rule | Message |",
-                "|------|------|----------|------|---------|",
-            ])
+            lines.extend(
+                [
+                    "## 🔍 Findings",
+                    "",
+                    "| File | Line | Severity | Rule | Message |",
+                    "|------|------|----------|------|---------|",
+                ]
+            )
 
             for finding in all_findings[:20]:  # 摘要限制为 20 个
                 file_str = str(finding.file_path) if finding.file_path else "-"
@@ -412,8 +414,7 @@ class ReportGenerator:
                 )
                 msg = finding.message[:50] + "..." if len(finding.message) > 50 else finding.message
                 lines.append(
-                    f"| {file_str} | {line_str} | {emoji} {finding.severity.value} | "
-                    f"{finding.rule_id} | {msg} |"
+                    f"| {file_str} | {line_str} | {emoji} {finding.severity.value} | {finding.rule_id} | {msg} |"
                 )
 
             if len(all_findings) > 20:
@@ -423,12 +424,14 @@ class ReportGenerator:
 
         # 添加 AI 审查部分
         if ai_review:
-            lines.extend([
-                "## 🤖 AI Review",
-                "",
-                ai_review.summary,
-                "",
-            ])
+            lines.extend(
+                [
+                    "## 🤖 AI Review",
+                    "",
+                    ai_review.summary,
+                    "",
+                ]
+            )
 
         return "\n".join(lines)
 
