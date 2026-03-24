@@ -158,16 +158,21 @@ class LLMReportGenerator:
         """
         findings_data = self._prepare_findings_data(scan_results)
 
-        prompt = f"""你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份适合 GitHub PR 的"傻瓜级修复清单"报告。
+        prompt = (
+            """你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份
+适合 GitHub PR 的"傻瓜级修复清单"报告。
 
 ## 项目信息
-- 项目名称: {project_name}
-- 提交: {commit_sha[:8] if commit_sha else "HEAD"}
-- 扫描耗时: {duration:.2f}s
-
+- 项目名称: """
+            + f"{project_name}\n"
+            + f"- 提交: {commit_sha[:8] if commit_sha else 'HEAD'}\n"
+            + f"- 扫描耗时: {duration:.2f}s\n"
+            + """
 ## 发现的问题数据
 ```json
-{json.dumps(findings_data, ensure_ascii=False, indent=2)}
+"""
+            + json.dumps(findings_data, ensure_ascii=False, indent=2)
+            + """
 ```
 
 ## 输出格式规范
@@ -224,9 +229,9 @@ class LLMReportGenerator:
 2. **颜色绑定**：🔴=严重(CRITICAL/HIGH) 🟠=中等(MEDIUM) 🟢=轻微(LOW/INFO)
 3. **高亮规范**：所有文件路径、命令、代码片段必须用 `代码块` 包裹
 4. **行动导向**：每个严重问题必须提供可执行的修复方案（带 - [ ] checkbox）
-5. **长度限制**：确保整体长度不超过 {max_length} 字符
-
-请直接输出 Markdown 内容。"""
+5. **长度限制**：确保整体长度不超过 """
+            + f"{max_length} 字符\n\n请直接输出 Markdown 内容。"
+        )
 
         try:
             comment = await self._call_llm(prompt)
@@ -255,15 +260,20 @@ class LLMReportGenerator:
         """
         findings_data = self._prepare_findings_data(scan_results)
 
-        prompt = f"""你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份适合 GitHub Actions 的"傻瓜级修复清单"报告。
+        prompt = (
+            """你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份
+适合 GitHub Actions 的"傻瓜级修复清单"报告。
 
 ## 项目信息
-- 项目名称: {project_name}
-- 扫描耗时: {duration_ms:.0f}ms
-
+- 项目名称: """
+            + f"{project_name}\n"
+            + f"- 扫描耗时: {duration_ms:.0f}ms\n"
+            + """
 ## 发现的问题数据
 ```json
-{json.dumps(findings_data, ensure_ascii=False, indent=2)}
+"""
+            + json.dumps(findings_data, ensure_ascii=False, indent=2)
+            + """
 ```
 
 ## 输出格式规范
@@ -327,6 +337,7 @@ class LLMReportGenerator:
 - 🟢 无问题：概览栏显示 Passed 状态
 
 请直接输出 Markdown 内容。"""
+        )
 
         try:
             return await self._call_llm(prompt)
