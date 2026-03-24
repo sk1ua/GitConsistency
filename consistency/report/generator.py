@@ -272,7 +272,7 @@ class ReportGenerator:
         if finding.line:
             lines.append(f"- **行号**: {finding.line}")
         if finding.code_snippet:
-            lines.append(f"\n**代码片段**:")
+            lines.append("\n**代码片段**:")
             lines.append(f"```python\n{finding.code_snippet[:300]}\n```")
         return "\n".join(lines) if lines else "- 无具体位置信息"
 
