@@ -114,7 +114,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           version: ${{ env.UV_VERSION }}
-          enable-cache: true
+          enable-cache: false
 
       # -----------------------------------------------------------------------
       # 安装 GitConsistency
@@ -247,7 +247,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: true
+          enable-cache: false
 
       - name: Install dev dependencies
         run: |
@@ -297,7 +297,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: true
+          enable-cache: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
