@@ -98,10 +98,11 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Install GitConsistency
         run: |
-          uv venv
-          # 显式安装 setuptools 到虚拟环境，确保 semgrep 可用
-          uv pip install --python .venv/bin/python setuptools
-          uv pip install --python .venv/bin/python "setuptools>=69.0.0" "-e" ".[full]"
+          # 使用系统 pip 先安装 setuptools（semgrep 依赖 pkg_resources）
+          pip install setuptools
+          uv venv --system-site-packages
+          # 再安装项目及其依赖
+          uv pip install -e ".[full]"
 
       # -----------------------------------------------------------------------
       # 缓存模型和数据
@@ -212,9 +213,9 @@ jobs:
 
       - name: Install dev dependencies
         run: |
-          uv venv
-          uv pip install --python .venv/bin/python setuptools
-          uv pip install --python .venv/bin/python "setuptools>=69.0.0" "-e" ".[dev,full]" --no-cache
+          pip install setuptools
+          uv venv --system-site-packages
+          uv pip install -e ".[dev,full]" --no-cache
 
       - name: Ruff check
         run: |
@@ -255,9 +256,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv venv
-          uv pip install --python .venv/bin/python setuptools
-          uv pip install --python .venv/bin/python "setuptools>=69.0.0" "-e" ".[dev,full]" --no-cache
+          pip install setuptools
+          uv venv --system-site-packages
+          uv pip install -e ".[dev,full]" --no-cache
 
       - name: Run tests with coverage
         run: |
