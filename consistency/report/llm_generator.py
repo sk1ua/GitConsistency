@@ -263,14 +263,10 @@ class LLMReportGenerator:
 
         return {
             "total_findings": len(all_findings),
-            "severity_counts": {
-                sev: len(items) for sev, items in findings_by_severity.items()
-            },
+            "severity_counts": {sev: len(items) for sev, items in findings_by_severity.items()},
             "findings_by_severity": findings_by_severity,
             "scanner_errors": [
-                {"scanner": result.scanner_name, "errors": result.errors}
-                for result in scan_results
-                if result.errors
+                {"scanner": result.scanner_name, "errors": result.errors} for result in scan_results if result.errors
             ],
         }
 
@@ -326,9 +322,9 @@ class LLMReportGenerator:
         counts = findings_data["severity_counts"]
         total = sum(counts.values())
 
-        crit_count = counts.get('CRITICAL', 0)
-        high_count = counts.get('HIGH', 0)
-        med_count = counts.get('MEDIUM', 0)
+        crit_count = counts.get("CRITICAL", 0)
+        high_count = counts.get("HIGH", 0)
+        med_count = counts.get("MEDIUM", 0)
         summary_line = f"🔴 严重问题 {crit_count} 项    🟠 中等问题 {high_count} 项    🟢 轻微问题 {med_count} 项"
 
         lines = [
