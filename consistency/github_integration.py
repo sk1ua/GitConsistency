@@ -30,3 +30,14 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
+
+__all__ = [
+    "GitHubIntegration",
+    "GitHubClient",
+    "CommentManager",
+    "PRComment",
+    "PRInfo",
+    "detect_from_env",
+    "is_github_actions",
+    "parse_pr_url",
+]

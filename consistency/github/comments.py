@@ -118,6 +118,7 @@ class CommentManager:
                 error_msg = str(e)
                 logger.error(f"发布评论失败: {error_msg}")
                 self._handle_error(error_msg, repo, pr_number, e)
+                return {"error": error_msg}
 
     def _handle_error(self, error_msg: str, repo: str, pr_number: int, original: Exception) -> None:
         """分类处理错误."""

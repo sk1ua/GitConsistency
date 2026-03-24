@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.panel import Panel
 
@@ -123,7 +123,7 @@ async def _run_analysis(
     skip_security: bool,
     skip_ai: bool,
     settings: Settings,
-) -> dict:
+) -> dict[str, Any]:
     """运行分析."""
     orchestrator = ScannerOrchestrator(settings)
 
@@ -156,7 +156,7 @@ async def _run_analysis(
     }
 
 
-def _print_summary(result: dict, console: Console) -> None:
+def _print_summary(result: dict[str, Any], console: Console) -> None:
     """打印分析摘要."""
     from rich.table import Table
 
