@@ -372,6 +372,11 @@ class SecurityScanner(BaseScanner):
             stdout_str = stdout.decode().strip()
             stderr_str = stderr.decode().strip()
 
+            # 记录调试信息
+            logger.debug(f"Bandit stdout (first 200 chars): {stdout_str[:200] if stdout_str else '(empty)'}")
+            logger.debug(f"Bandit stderr: {stderr_str[:200] if stderr_str else '(empty)'}")
+            logger.debug(f"Bandit return code: {proc.returncode}")
+
             # Bandit 在找不到文件或出错时会输出到 stderr
             if stderr_str and proc.returncode not in (0, 1):
                 errors.append(f"Bandit 错误 (exit {proc.returncode}): {stderr_str}")
@@ -381,6 +386,11 @@ class SecurityScanner(BaseScanner):
             if not stdout_str:
                 if stderr_str:
                     logger.warning(f"Bandit: {stderr_str}")
+                return findings, 0, errors
+
+            # 检查是否是有效的 JSON（以 { 开头）
+            if not stdout_str.startswith('{'):
+                logger.warning(f"Bandit 输出不是 JSON 格式: {stdout_str[:100]}")
                 return findings, 0, errors
 
             result = json.loads(stdout_str)
