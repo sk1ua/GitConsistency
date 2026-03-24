@@ -151,12 +151,15 @@ jobs:
           fi
           
           # 使用系统 Python 运行（避免 uv run 隔离环境问题）
+          # 默认启用多 Agent 审查（--use-agents）
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            echo "🤖 启用多 Agent 智能审查（SecurityAgent + LogicAgent + StyleAgent）"
             gitconsistency ci \
               --event pull_request \
               --pr "$GITHUB_PR_NUMBER" \
               $SKIP_AI \
-              $DRY_RUN_FLAG
+              $DRY_RUN_FLAG \
+              --use-agents
           else
             gitconsistency analyze "$PROJECT_PATH" \
               $SKIP_AI \

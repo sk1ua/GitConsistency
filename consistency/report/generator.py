@@ -84,6 +84,7 @@ class ReportGenerator:
         self,
         scan_results: list[ScanResult],
         ai_review: ReviewResult | None = None,
+        agent_reviews: list[ReviewResult] | None = None,
         project_name: str = "Unknown",
         max_length: int = 65536,
     ) -> str:
@@ -92,6 +93,7 @@ class ReportGenerator:
         Args:
             scan_results: 扫描结果列表
             ai_review: AI 审查结果
+            agent_reviews: 多 Agent 审查结果列表
             project_name: 项目名称
             max_length: 最大长度限制
 
@@ -121,13 +123,41 @@ class ReportGenerator:
             "",
         ]
 
+        # 添加多 Agent 审查结果
+        if agent_reviews:
+            lines.append("### 🤖 Multi-Agent Review")
+            lines.append("")
+
+            # 统计各 Agent 的结果
+            total_agent_comments = sum(len(r.comments) for r in agent_reviews)
+            lines.append(f"启用 **SecurityAgent**、**LogicAgent**、**StyleAgent** 并行审查")
+            lines.append(f"- 审查文件数: {len(agent_reviews)}")
+            lines.append(f"- Agent 发现问题: {total_agent_comments}")
+            lines.append("")
+
+            # 显示高严重级别的问题
+            high_issues = []
+            for r in agent_reviews:
+                for c in r.comments:
+                    if c.severity.value in ("HIGH", "CRITICAL"):
+                        high_issues.append((r, c))
+
+            if high_issues:
+                lines.append("**Agent 发现的关键问题：**")
+                for _, comment in high_issues[:5]:  # 最多 5 个
+                    location = f"`{comment.file}:{comment.line}`" if comment.file and comment.line else ""
+                    lines.append(f"- **{comment.severity.value}** [{comment.category.value}] {comment.message[:80]}")
+                    if location:
+                        lines.append(f"  - 📍 {location}")
+                lines.append("")
+
         # 添加关键问题
         critical_and_high = [f for f in all_findings if f.severity in (Severity.CRITICAL, Severity.HIGH)][
             :10
         ]  # 最多显示 10 个
 
         if critical_and_high:
-            lines.append("### 🚨 Critical Issues")
+            lines.append("### 🚨 Security Scan Issues")
             lines.append("")
             for finding in critical_and_high:
                 location = f"`{finding.file_path}:{finding.line}`" if finding.file_path else ""
@@ -138,7 +168,7 @@ class ReportGenerator:
 
         # 添加 AI 审查摘要
         if ai_review:
-            lines.append("### 🤖 AI Review")
+            lines.append("### 📝 AI Review Summary")
             lines.append(f"{ai_review.summary[:200]}...")
             lines.append("")
 

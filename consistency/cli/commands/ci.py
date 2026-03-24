@@ -31,10 +31,11 @@ def register_ci_command(app: typer.Typer, console: Console) -> None:
         pr_number: int | None = None,
         dry_run: bool = False,
         skip_ai: bool = False,
+        use_agents: bool = True,
     ) -> None:
         """在 CI/CD 环境中运行（GitHub Actions 等）."""
         print_banner()
-        _run_ci_command(event, pr_number, dry_run, skip_ai, console)
+        _run_ci_command(event, pr_number, dry_run, skip_ai, use_agents, console)
 
 
 def _run_ci_command(
@@ -42,6 +43,7 @@ def _run_ci_command(
     pr_number: int | None,
     dry_run: bool,
     skip_ai: bool,
+    use_agents: bool,
     console: Console,
 ) -> None:
     """执行 CI 命令的核心逻辑."""
@@ -82,6 +84,7 @@ def _run_ci_command(
                 path=Path("."),
                 skip_security=False,
                 skip_ai=skip_ai,
+                use_agents=use_agents,
                 settings=settings,
             )
         )
@@ -90,6 +93,7 @@ def _run_ci_command(
         comment = generator.generate_github_comment(
             scan_results=list(result["results"].values()),
             ai_review=result.get("ai_review"),
+            agent_reviews=result.get("agent_reviews"),
             project_name=repo.split("/")[-1],
         )
 
@@ -122,6 +126,7 @@ async def _run_analysis(
     path: Path,
     skip_security: bool,
     skip_ai: bool,
+    use_agents: bool,
     settings: Settings,
 ) -> dict[str, Any]:
     """运行分析."""
@@ -130,7 +135,87 @@ async def _run_analysis(
     report = await orchestrator.scan(path, skip_security=skip_security)
 
     ai_review = None
-    if not skip_ai and settings.is_litellm_configured:
+    agent_reviews = None
+
+    # 多 Agent 审查（优先使用）
+    if use_agents and not skip_ai:
+        from consistency.agents import ReviewSupervisor
+        from consistency.core.gitnexus_client import GitNexusClient
+
+        console.print("[blue]🤖 启用多 Agent 智能审查...[/blue]")
+
+        # 初始化 GitNexus
+        gitnexus = None
+        if GitNexusClient.is_available():
+            gitnexus = GitNexusClient()
+            console.print("[green]✓[/green] GitNexus 代码知识图谱已启用")
+        else:
+            console.print("[yellow]! GitNexus 未安装，跳过代码上下文分析[/yellow]")
+
+        # 创建 Supervisor 并运行多 Agent 审查
+        supervisor = ReviewSupervisor(
+            gitnexus_client=gitnexus,
+            quick_mode=False,  # CI 中使用完整模式
+        )
+
+        # 对发现的文件进行 Agent 审查
+        all_findings = []
+        for r in report.results.values():
+            all_findings.extend(r.findings)
+
+        # 获取唯一文件列表
+        files_to_review = list(set(str(f.file_path) for f in all_findings if f.file_path))
+
+        if files_to_review:
+            console.print(f"[blue]🔍 Agent 正在审查 {len(files_to_review)} 个文件...[/blue]")
+
+            agent_results = []
+            for file_path_str in files_to_review[:10]:  # 最多审查 10 个文件
+                file_path = Path(file_path_str)
+                if file_path.exists():
+                    try:
+                        result = await supervisor.review(file_path, file_path.read_text(encoding="utf-8"))
+                        agent_results.append(result)
+                    except Exception as e:
+                        console.print(f"[yellow]! 审查 {file_path.name} 失败: {e}[/yellow]")
+
+            agent_reviews = agent_results
+
+            # 汇总 Agent 审查结果作为 AI Review
+            if agent_results:
+                from consistency.reviewer.models import ReviewResult, Severity
+
+                all_comments = []
+                summaries = []
+                for r in agent_results:
+                    all_comments.extend(r.comments)
+                    summaries.append(r.summary)
+
+                # 确定最高严重级别
+                max_severity = Severity.LOW
+                for r in agent_results:
+                    if r.severity.value == "CRITICAL":
+                        max_severity = Severity.CRITICAL
+                    elif r.severity.value == "HIGH" and max_severity.value != "CRITICAL":
+                        max_severity = Severity.HIGH
+                    elif r.severity.value == "MEDIUM" and max_severity.value in ("LOW", "INFO"):
+                        max_severity = Severity.MEDIUM
+
+                ai_review = ReviewResult(
+                    summary=f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，发现 {len(all_comments)} 个问题。",
+                    severity=max_severity,
+                    comments=all_comments[:20],  # 最多 20 条评论
+                    action_items=[
+                        f"{c.file}:{c.line} - {c.message}"
+                        for c in all_comments
+                        if c.severity.value in ("HIGH", "CRITICAL")
+                    ][:5],
+                )
+
+                console.print(f"[green]✓[/green] Agent 审查完成: 发现 {len(all_comments)} 个问题")
+
+    # 回退到传统 AI 审查
+    elif not skip_ai and settings.is_litellm_configured:
         from consistency.reviewer import AIReviewer, ReviewContext
 
         reviewer = AIReviewer()
@@ -151,6 +236,7 @@ async def _run_analysis(
         "results": report.results,
         "duration_ms": report.duration_ms,
         "ai_review": ai_review,
+        "agent_reviews": agent_reviews,
         "errors": report.errors,
         "commit_sha": get_git_commit_sha(path),
     }
