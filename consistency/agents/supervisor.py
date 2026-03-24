@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
-from consistency.agents.base import AgentResult, Severity
+from consistency.agents.base import AgentResult, BaseAgent, Severity
 from consistency.agents.logic_agent import LogicAgent
 from consistency.agents.security_agent import SecurityAgent
 from consistency.agents.style_agent import StyleAgent
@@ -143,7 +143,7 @@ class ReviewSupervisor:
     async def _run_agent(
         self,
         name: str,
-        agent: Any,
+        agent: BaseAgent,
         file_path: Path,
         code: str,
     ) -> AgentResult:
@@ -163,7 +163,7 @@ class ReviewSupervisor:
         try:
             result = await agent.analyze(file_path, code)
             logger.debug(f"{name} 完成: {len(result.comments)} 条发现")
-            return cast(AgentResult, result)
+            return result
 
         except Exception as e:
             logger.exception(f"{name} 异常: {e}")

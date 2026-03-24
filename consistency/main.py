@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -75,6 +76,23 @@ def _print_banner() -> None:
     banner.append("╚═══════════════════════════════════════════╝", style="cyan")
     console.print(banner)
     console.print()
+
+
+def _get_git_commit_sha(path: Path) -> str:
+    """获取目标路径下的 Git 提交 SHA，失败时返回 unknown."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            check=True,
+        )
+        sha = result.stdout.strip()
+        return sha if sha else "unknown"
+    except Exception:
+        return "unknown"
 
 
 @app.callback()
@@ -196,8 +214,9 @@ def analyze_command(
         report = generator.generate(
             scan_results=list(result["results"].values()),
             ai_review=result.get("ai_review"),
-            project_name=path.name,
+            project_name=path.resolve().name or "Unknown",
             format=report_format,
+            commit_sha=result.get("commit_sha", "unknown"),
             duration=result["duration_ms"] / 1000,
         )
 
@@ -271,17 +290,31 @@ async def _run_analysis(
         "results": report.results,
         "duration_ms": report.duration_ms,
         "ai_review": ai_review,
+        "errors": report.errors,
+        "commit_sha": _get_git_commit_sha(path),
     }
 
 
 def _print_summary(result: dict[str, Any]) -> None:
     """打印分析摘要."""
+    scan_errors = list(result.get("errors", []))
+    for scan_result in result.get("results", {}).values():
+        scan_errors.extend(getattr(scan_result, "errors", []))
+
+    if scan_errors:
+        console.print("\n[red]⚠ 扫描过程中发生错误，结果可能不完整：[/red]")
+        for err in scan_errors:
+            console.print(f"[red]- {err}[/red]")
+
     all_findings = []
     for r in result["results"].values():
         all_findings.extend(r.findings)
 
     if not all_findings:
-        console.print("\n[green]🎉 未发现安全问题！[/green]")
+        if scan_errors:
+            console.print("\n[yellow]⚠ 当前未发现问题，但扫描器存在错误，请先修复环境后重跑。[/yellow]")
+        else:
+            console.print("\n[green]🎉 未发现安全问题！[/green]")
         return
 
     table = Table(title="安全扫描结果摘要")
@@ -444,6 +477,11 @@ def scan_security(
 
         console.print(f"扫描文件: {result.scanned_files}")
         console.print(f"发现问题: {len(result.findings)}")
+
+        if result.errors:
+            console.print("[red]扫描错误：[/red]")
+            for err in result.errors:
+                console.print(f"  [red]- {err}[/red]")
 
         for finding in result.findings:
             console.print(f"  [{finding.severity.value}] {finding.rule_id}: {finding.message[:80]}")

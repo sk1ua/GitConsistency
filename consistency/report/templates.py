@@ -75,10 +75,19 @@ class MarkdownTemplates:
 **Files Scanned**: {scanned_files}  
 **Issues Found**: {issue_count}
 
+{errors_block}
+
 {findings_table}
 
 ---
 """
+
+    SCANNER_ERRORS = """### Scanner Errors
+
+{rows}
+"""
+
+    SCANNER_ERROR_ROW = "- ❌ {error}"
 
     # 发现表格
     FINDINGS_TABLE = """### Findings

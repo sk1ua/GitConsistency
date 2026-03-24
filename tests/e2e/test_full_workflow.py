@@ -98,11 +98,11 @@ def insecure_function(password):
 
     def test_github_integration_init(self) -> None:
         """测试 GitHub 集成初始化."""
-        from consistency.github_integration import GitHubIntegration
+        from consistency.github import GitHubIntegration
 
         # 无 token 时应警告但不报错
         github = GitHubIntegration(token=None)
-        assert github.token is None
+        assert github.client.token is None
 
     def test_config_loading(self) -> None:
         """测试配置加载."""

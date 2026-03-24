@@ -240,11 +240,12 @@ Performance-focused review - examine:
         """输出格式指令."""
         return """
 
-## Output Format
+## Output Format (REQUIRED JSON)
 
-Provide your review in the following JSON structure:
+You MUST respond with a valid JSON object ONLY. Do not include any text before or after the JSON.
 
-```json
+Required JSON structure:
+
 {
   "summary": "Brief overall assessment (2-3 sentences)",
   "severity": "low|medium|high|critical",
@@ -263,14 +264,17 @@ Provide your review in the following JSON structure:
     "Suggested improvements"
   ]
 }
-```
 
 Requirements:
+- Response MUST be valid JSON (no markdown code blocks, no extra text)
 - Be specific with file paths and line numbers
 - Prioritize high-impact issues
-- Include code examples for complex suggestions
-- If no issues found, confirm with {  # noqa: E501
-"summary": "LGTM! No significant issues found.", "severity": "low", "comments": []}"""
+- Include code examples in "suggestion" field for complex fixes
+- If no issues found, use:
+  {"summary": "LGTM!", "severity": "low", "comments": [], "action_items": []}
+- severity field must be exactly one of: "low", "medium", "high", "critical"
+- category field must be exactly one of: "bug", "security", "style", "performance", "maintainability"
+"""
 
 
 class PromptCache:

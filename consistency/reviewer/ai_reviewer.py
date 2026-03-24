@@ -1,6 +1,6 @@
 """AI 代码审查器.
 
-使用 LiteLLM 调用多种 LLM 模型，
+使用 LLM Provider 抽象层调用多种模型，
 支持 DeepSeek、Claude、Grok 等任意 OpenAI 兼容模型.
 """
 
@@ -14,7 +14,10 @@ from pathlib import Path
 from typing import Any
 
 from consistency.config import get_settings
+from consistency.llm import LLMConfig, LLMProviderFactory
+from consistency.llm.base import BaseLLMProvider
 from consistency.reviewer.context_enhancer import ContextEnhancer
+from consistency.reviewer.disk_cache import DiskCache
 from consistency.reviewer.models import (
     CommentCategory,
     ReviewComment,
@@ -38,7 +41,7 @@ class ReviewCache:
 class AIReviewer:
     """AI 代码审查器.
 
-    使用 LiteLLM 统一接口调用多种 LLM 模型，
+    使用 LLM Provider 统一接口调用多种 LLM 模型，
     支持结构化输出、重试、缓存和降级策略.
 
     Examples:
@@ -60,6 +63,8 @@ class AIReviewer:
         api_base: str | None = None,
         cache_dir: str | Path = ".cache/reviews",
         cache_ttl: int = 3600,
+        force_json: bool = True,
+        provider_type: str = "litellm",
     ) -> None:
         """初始化 AI 审查器.
 
@@ -73,6 +78,8 @@ class AIReviewer:
             api_base: 自定义 API 基础 URL
             cache_dir: 缓存目录
             cache_ttl: 缓存过期时间（秒）
+            force_json: 是否强制 JSON 输出（使用 response_format，需要模型支持）
+            provider_type: LLM Provider 类型（默认 litellm）
         """
         # 从配置读取默认值
         settings = get_settings()
@@ -84,31 +91,70 @@ class AIReviewer:
         self.timeout = timeout or settings.litellm_timeout
         self.api_key = api_key or settings.litellm_api_key
         self.api_base = api_base
+        self.force_json = force_json
+        self.provider_type = provider_type
+
+        # 初始化 LLM Provider
+        self._provider: BaseLLMProvider | None = None
+        self._fallback_provider: BaseLLMProvider | None = None
 
         # 缓存
         self._prompt_cache = PromptCache()
         self._result_cache: dict[str, ReviewCache] = {}
         self._cache_ttl = cache_ttl
+        self._disk_cache = DiskCache(cache_dir, ttl=cache_ttl) if cache_dir else None
 
         # 统计
         self._stats = {
             "requests": 0,
             "cache_hits": 0,
+            "disk_cache_hits": 0,
             "errors": 0,
             "tokens_used": 0,
+            "json_parse_success": 0,
+            "json_parse_fallback": 0,
         }
 
         self._validate_setup()
+
+    def _get_provider(self, use_fallback: bool = False) -> BaseLLMProvider:
+        """获取或创建 LLM Provider 实例.
+
+        Args:
+            use_fallback: 是否使用备选模型
+
+        Returns:
+            LLM Provider 实例
+        """
+        if use_fallback:
+            if self._fallback_provider is None:
+                config = LLMConfig(
+                    model=self.fallback_model,
+                    api_key=self.api_key,
+                    api_base=self.api_base,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
+                    timeout=self.timeout,
+                )
+                self._fallback_provider = LLMProviderFactory.create(self.provider_type, config)
+            return self._fallback_provider
+
+        if self._provider is None:
+            config = LLMConfig(
+                model=self.model,
+                api_key=self.api_key,
+                api_base=self.api_base,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                timeout=self.timeout,
+            )
+            self._provider = LLMProviderFactory.create(self.provider_type, config)
+        return self._provider
 
     def _validate_setup(self) -> None:
         """验证配置."""
         if not self.api_key:
             logger.warning("未配置 API 密钥，审查功能将不可用")
-
-        try:
-            import litellm  # noqa: F401
-        except ImportError:
-            raise ImportError("LiteLLM 未安装，请运行: pip install litellm")
 
     async def review(
         self,
@@ -138,7 +184,6 @@ class AIReviewer:
             cached = self._get_cached_result(cache_key)
             if cached:
                 logger.debug(f"使用缓存的审查结果: {cache_key[:8]}")
-                self._stats["cache_hits"] += 1
                 return cached
 
         # 获取 GitNexus 上下文增强
@@ -164,12 +209,23 @@ class AIReviewer:
         # 调用 LLM
         start_time = time.perf_counter()
         try:
-            response = await self._call_llm(messages)
+            provider = self._get_provider()
+            response = await provider.complete_json(
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                timeout=self.timeout,
+            )
             duration = time.perf_counter() - start_time
             logger.info(f"LLM 调用完成: {duration:.2f}s")
 
+            # 更新统计
+            self._stats["requests"] += 1
+            if response.usage:
+                self._stats["tokens_used"] += response.usage.get("total_tokens", 0)
+
             # 解析结果
-            result = self._parse_response(response)
+            result = self._parse_response(response.content)
 
             # 缓存结果
             if use_cache:
@@ -261,15 +317,44 @@ class AIReviewer:
         except Exception as e:
             logger.warning(f"主模型失败，尝试备选模型: {e}")
 
-            # 切换到备选模型
-            original_model = self.model
-            self.model = self.fallback_model
+            # 切换到备选 Provider
             try:
-                result = await self.review(context, review_type, use_cache=False, raise_on_error=True)
+                fallback_provider = self._get_provider(use_fallback=True)
+                # 标准化上下文
+                if isinstance(context, str):
+                    context = ReviewContext(diff=context)
+
+                messages = self._build_messages(context, review_type)
+                response = await fallback_provider.complete_json(
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
+                    timeout=self.timeout,
+                )
+
+                # 更新统计
+                self._stats["requests"] += 1
+                if response.usage:
+                    self._stats["tokens_used"] += response.usage.get("total_tokens", 0)
+
+                result = self._parse_response(response.content)
                 result.metadata["used_fallback_model"] = True
+                result.metadata["fallback_model"] = self.fallback_model
                 return result
-            finally:
-                self.model = original_model
+
+            except Exception as fallback_error:
+                logger.error(f"备选模型也失败: {fallback_error}")
+                return ReviewResult(
+                    summary=f"主模型和备选模型均失败: {e}, {fallback_error}",
+                    severity=Severity.LOW,
+                    comments=[],
+                    action_items=["检查 API 配置和网络连接"],
+                    metadata={
+                        "error": "both_models_failed",
+                        "primary_error": str(e),
+                        "fallback_error": str(fallback_error),
+                    },
+                )
 
     def _build_messages(
         self,
@@ -287,46 +372,11 @@ class AIReviewer:
 
         return messages
 
-    async def _call_llm(self, messages: list[dict[str, str]]) -> str:
-        """调用 LLM.
-
-        Args:
-            messages: 消息列表
-
-        Returns:
-            LLM 响应文本
-        """
-        import litellm
-
-        self._stats["requests"] += 1
-
-        # 配置
-        kwargs: dict[str, Any] = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "timeout": self.timeout,
-        }
-
-        if self.api_key:
-            kwargs["api_key"] = self.api_key
-        if self.api_base:
-            kwargs["api_base"] = self.api_base
-
-        # 调用
-        response = await litellm.acompletion(**kwargs)
-
-        # 更新统计
-        usage = response.get("usage", {})
-        self._stats["tokens_used"] += usage.get("total_tokens", 0)
-
-        # 提取内容
-        content = response["choices"][0]["message"]["content"]
-        return str(content)
-
     def _parse_response(self, content: str) -> ReviewResult:
         """解析 LLM 响应.
+
+        由于使用了 response_format={"type": "json_object"}，
+        LLM 应该直接返回有效的 JSON 字符串。
 
         Args:
             content: 响应文本
@@ -334,17 +384,28 @@ class AIReviewer:
         Returns:
             结构化结果
         """
-        # 尝试提取 JSON
+        # 首先尝试直接解析（JSON mode 应该直接返回有效 JSON）
+        try:
+            data = json.loads(content)
+            self._stats["json_parse_success"] += 1
+            return ReviewResult.model_validate(data)
+        except json.JSONDecodeError:
+            pass  # 继续尝试提取
+
+        # 尝试从文本中提取 JSON（兼容模式，某些模型可能不完全支持 JSON mode）
         json_content = self._extract_json(content)
 
         try:
             data = json.loads(json_content)
+            self._stats["json_parse_success"] += 1
             return ReviewResult.model_validate(data)
         except json.JSONDecodeError as e:
             logger.warning(f"JSON 解析失败，使用启发式解析: {e}")
+            self._stats["json_parse_fallback"] += 1
             return self._heuristic_parse(content)
         except Exception as e:
             logger.error(f"解析失败: {e}")
+            self._stats["json_parse_fallback"] += 1
             return self._heuristic_parse(content)
 
     def _extract_json(self, content: str) -> str:
@@ -431,20 +492,34 @@ class AIReviewer:
         return hashlib.sha256(content.encode()).hexdigest()[:32]
 
     def _get_cached_result(self, key: str) -> ReviewResult | None:
-        """获取缓存的结果."""
-        if key not in self._result_cache:
-            return None
-
-        cached = self._result_cache[key]
-        if time.time() - cached.timestamp > self._cache_ttl:
+        """获取缓存的结果（内存 + 磁盘）."""
+        # 先检查内存缓存
+        if key in self._result_cache:
+            cached = self._result_cache[key]
+            if time.time() - cached.timestamp <= self._cache_ttl:
+                self._stats["cache_hits"] += 1
+                return cached.result
             del self._result_cache[key]
-            return None
 
-        return cached.result
+        # 再检查磁盘缓存
+        if self._disk_cache:
+            disk_cached = self._disk_cache.get(key)
+            if disk_cached:
+                result, model = disk_cached
+                self._stats["disk_cache_hits"] += 1
+                # 回填内存缓存
+                self._result_cache[key] = ReviewCache(
+                    result=result,
+                    timestamp=time.time(),
+                    model=model,
+                )
+                return result
+
+        return None
 
     def _cache_result(self, key: str, result: ReviewResult) -> None:
-        """缓存结果."""
-        # 限制缓存大小
+        """缓存结果（内存 + 磁盘）."""
+        # 内存缓存
         if len(self._result_cache) >= 100:
             # 移除最旧的 50%
             sorted_items = sorted(
@@ -459,17 +534,27 @@ class AIReviewer:
             model=self.model,
         )
 
+        # 磁盘缓存
+        if self._disk_cache:
+            self._disk_cache.set(key, result, self.model)
+
     def get_stats(self) -> dict[str, Any]:
         """获取统计信息."""
-        return {
+        stats = {
             **self._stats,
-            "cache_size": len(self._result_cache),
+            "memory_cache_size": len(self._result_cache),
             "model": self.model,
             "fallback_model": self.fallback_model,
+            "provider_type": self.provider_type,
         }
+        if self._disk_cache:
+            stats["disk_cache"] = self._disk_cache.get_stats()
+        return stats
 
     def clear_cache(self) -> None:
         """清空缓存."""
         self._result_cache.clear()
         self._prompt_cache.clear()
+        if self._disk_cache:
+            self._disk_cache.clear()
         logger.info("审查缓存已清空")

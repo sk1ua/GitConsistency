@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consistency.github_integration import GitHubIntegration, PRComment
+from consistency.github import GitHubIntegration, PRComment
 from consistency.exceptions import GitHubError
 
 
@@ -14,13 +14,13 @@ class TestGitHubIntegrationInit:
 
     def test_default_init(self) -> None:
         """测试默认初始化."""
-        with patch("consistency.github_integration.get_settings") as mock_settings:
+        with patch("consistency.github.client.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(github_token="test-token")
 
             github = GitHubIntegration()
-            assert github.token == "test-token"
-            assert github.delete_old_comments is True
-            assert github.max_concurrent == 5
+            assert github.client.token == "test-token"
+            assert github.comments.delete_old_comments is True
+            assert github.client.max_concurrent == 5
 
     def test_custom_init(self) -> None:
         """测试自定义初始化."""
@@ -29,16 +29,16 @@ class TestGitHubIntegrationInit:
             delete_old_comments=False,
             max_concurrent=10,
         )
-        assert github.token == "custom-token"
-        assert github.delete_old_comments is False
-        assert github.max_concurrent == 10
+        assert github.client.token == "custom-token"
+        assert github.comments.delete_old_comments is False
+        assert github.client.max_concurrent == 10
 
     def test_no_token_warning(self) -> None:
         """测试无 token 时警告."""
-        with patch("consistency.github_integration.get_settings") as mock_settings:
+        with patch("consistency.github.client.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(github_token=None)
 
-            with patch("consistency.github_integration.logger") as mock_logger:
+            with patch("consistency.github.client.logger") as mock_logger:
                 GitHubIntegration()
                 mock_logger.warning.assert_called_once()
 

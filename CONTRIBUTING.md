@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢您对 GitConsistency 的兴趣！本文档将帮助您参与项目开发。
+感谢您对 GitConsistency 的兴趣！本文档帮助您参与项目开发。
 
 ## 开发环境设置
 
@@ -21,32 +21,15 @@ cd GitConsistency
 uv venv
 uv pip install -e ".[dev]"
 
-# 3. 安装 pre-commit hooks
-pre-commit install
-
-# 4. 验证安装
+# 3. 验证安装
 gitconsistency --version
-```
-
-## 项目结构
-
-```
-gitconsistency/
-├── core/           # GitNexus MCP 客户端
-├── scanners/       # 扫描引擎
-├── reviewer/       # AI 审查
-├── report/         # 报告生成
-└── tests/          # 测试
-    ├── unit/       # 单元测试
-    ├── integration/# 集成测试
-    └── e2e/        # 端到端测试
 ```
 
 ## 代码规范
 
 ### 风格
 
-我们使用 Ruff 进行代码格式化和 lint：
+使用 Ruff 进行代码格式化和 lint：
 
 ```bash
 # 格式化
@@ -56,7 +39,7 @@ ruff format .
 ruff check . --fix
 
 # 类型检查
-mypy consistency/  # 目录名保持不变
+mypy consistency/
 ```
 
 ### 提交信息
@@ -85,8 +68,6 @@ chore: 构建/工具相关
 
 ## 测试
 
-### 运行测试
-
 ```bash
 # 全部测试
 pytest -v
@@ -96,43 +77,13 @@ pytest tests/unit/ -v
 
 # 带覆盖率
 pytest -v --cov=consistency --cov-report=html
-
-# 并行测试
-pytest -v -n auto
 ```
 
 ### 测试规范
 
 - 单元测试放在 `tests/unit/`
 - 集成测试放在 `tests/integration/`
-- 测试文件命名为 `test_*.py`
 - 使用 pytest-asyncio 测试异步代码
-- 使用 respx 模拟 HTTP 请求
-
-## 添加新扫描器
-
-要添加新的扫描器，需要：
-
-1. 在 `scanners/` 创建新文件
-2. 继承 `BaseScanner` 接口
-3. 实现 `scan()` 方法
-4. 添加单元测试
-5. 更新 CLI 命令
-
-示例：
-
-```python
-# scanners/my_scanner.py
-from consistency.scanners.base import BaseScanner, ScanResult
-
-class MyScanner(BaseScanner):
-    async def scan(self, path: Path) -> ScanResult:
-        # 实现扫描逻辑
-        return ScanResult(
-            scanner_name="my_scanner",
-            findings=[...],
-        )
-```
 
 ## 问题报告
 
@@ -152,35 +103,9 @@ class MyScanner(BaseScanner):
 - 期望的功能描述
 - 可能的实现思路（可选）
 
-## 发布流程
-
-维护者使用以下流程发布新版本：
-
-```bash
-# 1. 更新版本号
-# 修改 pyproject.toml
-
-# 2. 更新 CHANGELOG.md
-
-# 3. 创建标签
-git tag -a v0.x.x -m "Release v0.x.x"
-
-# 4. 推送标签
-git push origin v0.x.x
-
-# 5. GitHub Actions 自动发布到 PyPI
-```
-
 ## 获取帮助
 
 - 💬 加入 [Discussions](https://github.com/sk1ua/GitConsistency/discussions)
 - 🐛 提交 [Issue](https://github.com/sk1ua/GitConsistency/issues)
-
-## 行为准则
-
-- 尊重所有贡献者
-- 欢迎新手，耐心指导
-- 专注于技术讨论
-- 遵守 MIT 许可证
 
 再次感谢您的贡献！🎉

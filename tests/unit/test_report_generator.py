@@ -112,6 +112,22 @@ class TestGenerateMarkdown:
 
         assert "No issues found" in report or "0" in report
 
+    def test_generate_markdown_with_scanner_errors(self, generator: ReportGenerator) -> None:
+        """测试扫描器报错时报告应展示失败状态和错误明细."""
+        result = ScanResult(
+            scanner_name="security",
+            findings=[],
+            scanned_files=0,
+            errors=["Semgrep 未安装", "Bandit 未安装"],
+        )
+
+        report = generator.generate_markdown([result])
+
+        assert "Scan finished with errors" in report
+        assert "❌ Failed (2 errors)" in report
+        assert "Scanner Errors" in report
+        assert "Semgrep 未安装" in report
+
 
 class TestGenerateJSON:
     """JSON 生成测试."""

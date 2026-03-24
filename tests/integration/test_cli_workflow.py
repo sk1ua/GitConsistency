@@ -46,8 +46,8 @@ if __name__ == "__main__":
     def test_report_generator(self) -> None:
         """测试报告生成器初始化."""
         generator = ReportGenerator()
-        # Version is read from __init__, may differ
-        assert generator.version is not None
+        # ReportGenerator uses theme
+        assert generator.theme is not None
 
     def test_scanner_orchestrator_init(self) -> None:
         """测试扫描器协调器初始化."""

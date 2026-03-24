@@ -28,16 +28,17 @@ class TestConfigIntegration:
     def test_env_file_loading(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """测试 .env 文件加载."""
         env_file = tmp_path / ".env"
+        # 使用嵌套分隔符 __ 设置嵌套配置
         env_file.write_text("""
-CONSISTENCY_LITELLM_MODEL=test-model
-CONSISTENCY_LOG_LEVEL=DEBUG
+CONSISTENCY_LLM__MODEL=test-model
+CONSISTENCY_LOGGING__LEVEL=DEBUG
 """)
 
         # 创建新的 settings 实例，强制重新加载
-        settings = Settings(_env_file=env_file)
+        settings = Settings(_env_file=str(env_file))
 
-        assert settings.litellm_model == "test-model"
-        assert settings.log_level == "DEBUG"
+        assert settings.llm.model == "test-model"
+        assert settings.logging.level == "DEBUG"
 
     def test_github_signature_format(self) -> None:
         """测试 GitHub 评论签名格式."""

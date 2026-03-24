@@ -2,7 +2,6 @@
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/uv-包管理-purple.svg)](https://github.com/astral-sh/uv)
-[![CI](https://github.com/sk1ua/GitConsistency/actions/workflows/consistency.yml/badge.svg)](https://github.com/sk1ua/GitConsistency/actions)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -31,7 +30,7 @@ pip install "git-consistency[full]"
 pip install "git-consistency[security]"    # 仅安全扫描
 pip install "git-consistency[ai]"          # 包含 AI 审查
 
-# 使用 uv（推荐）
+# 使用 uv（推荐开发者）
 uv pip install "git-consistency[full]"
 ```
 
@@ -42,7 +41,7 @@ uv pip install "git-consistency[full]"
 cd your-project
 gitconsistency init
 
-# 编辑 .env 文件，配置 API 密钥
+# 编辑 .env 文件配置 API 密钥
 vim .env
 ```
 
@@ -50,7 +49,6 @@ vim .env
 
 ```bash
 # 完整分析（安全扫描 + AI 审查）
-cd your-project
 gitconsistency analyze .
 
 # 仅安全扫描
@@ -58,18 +56,40 @@ gitconsistency scan security .
 
 # CI 模式（GitHub Actions）
 gitconsistency ci
-
-# 🚀 Vibe Coding 场景 - 快速审查
-gitconsistency review diff --quick           # 审查变更（快速）
-gitconsistency review file main.py --quick   # 审查单个文件
-gitconsistency review diff --cached          # 审查暂存区
 ```
-
-📚 **更多示例**: 查看 [examples/](examples/) 目录和 [Vibe Coding 指南](docs/vibe-coding.md)
 
 ---
 
-## 🏗️ 项目架构
+## 📖 使用场景
+
+### Vibe Coding 快速审查
+
+```bash
+# 审查变更（快速模式 <2s）
+gitconsistency review diff --quick
+
+# 审查暂存区
+gitconsistency review diff --cached
+
+# 审查单个文件
+gitconsistency review file main.py --quick
+
+# 对比目标分支
+gitconsistency review diff --target main
+```
+
+### 模式对比
+
+| 特性 | 快速模式 `--quick` | 完整模式 |
+|------|-------------------|---------|
+| 运行时间 | < 2s | 5-15s |
+| 审查 Agent | SecurityAgent | Security + Logic + Style |
+| 适用场景 | 保存时、频繁提交 | 提交前检查 |
+| 问题深度 | 关键安全问题 | 全面的代码质量 |
+
+---
+
+## 🏗️ 架构
 
 ```
 PR触发 / 手动审查
@@ -87,50 +107,6 @@ PR触发 / 手动审查
 GitNexus 代码图谱（可选，提供上下文）
    ↓
 生成报告 → GitHub PR 评论 / CLI 输出
-```
-
-**增量审查流程**（Vibe Coding 场景）：
-```
-保存文件 / git commit
-   ↓
-git diff → DiffParser 解析变更
-   ↓
-只审查变更的代码块
-   ↓
-快速反馈 (< 2s)
-```
-
----
-
-## 📁 项目结构
-
-```
-consistency/
-├── agents/                # LangChain 多 Agent 架构
-│   ├── base.py            # BaseAgent, AgentResult
-│   ├── security_agent.py  # 安全检查
-│   ├── logic_agent.py     # 逻辑分析
-│   ├── style_agent.py     # 风格检查
-│   ├── synthesis_agent.py # 结果汇总
-│   └── supervisor.py      # ReviewSupervisor
-├── commands/              # CLI 命令
-│   └── review.py          # review 子命令
-├── core/                  # GitNexus 客户端
-│   └── gitnexus_client.py
-├── scanners/              # 扫描器
-│   ├── security_scanner.py
-│   └── orchestrator.py
-├── reviewer/              # LLM 审查
-│   └── ai_reviewer.py
-├── tools/                 # LangChain 工具
-│   ├── gitnexus_tools.py
-│   ├── security_tools.py
-│   └── diff_tools.py      # 增量审查
-├── report/                # Markdown 报告生成
-│   └── generator.py
-├── github_integration.py  # GitHub 集成
-├── main.py                # Typer CLI 入口
-└── config.py              # Pydantic 配置
 ```
 
 ---
@@ -151,32 +127,43 @@ consistency/
 
 ---
 
-## 🧪 开发
+## 🔧 详细安装
+
+### 系统要求
+
+- **Python**: 3.12 或更高版本
+- **操作系统**: Linux, macOS, Windows (WSL 推荐)
+- **内存**: 至少 4GB RAM
+
+### 安装方式
+
+#### 方式一：使用 pip 安装（推荐用户）
 
 ```bash
-# 克隆仓库
-git clone https://github.com/sk1ua/GitConsistency.git
-cd GitConsistency
-
-# 安装开发依赖
-uv sync
-
-# 运行测试
-pytest -v
-
-# 代码检查
-ruff check .
-mypy consistency/
+pip install "git-consistency[full]"
 ```
 
-### Docker 支持
+#### 方式二：从源码安装（开发者）
 
 ```bash
-# 构建镜像
-docker build -t gitconsistency .
+git clone https://github.com/sk1ua/GitConsistency.git
+cd GitConsistency
+uv venv
+uv pip install -e ".[full,dev]"
+```
 
-# 运行分析
+#### 方式三：使用 Docker
+
+```bash
+docker build -t gitconsistency .
 docker run --rm -v $(pwd):/repo gitconsistency analyze /repo
+```
+
+### 验证安装
+
+```bash
+gitconsistency --version
+gitconsistency config validate
 ```
 
 ---
@@ -201,14 +188,45 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install GitConsistency
-        run: pip install "git-consistency[full]"
-      - name: Run Review
+      - run: pip install "git-consistency[full]"
+      - run: gitconsistency ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
-        run: gitconsistency ci
 ```
+
+### Secrets 配置
+
+| 配置项 | 类型 | 必需 | 说明 |
+|--------|------|------|------|
+| `GITHUB_TOKEN` | Secret | ✅ 自动 | GitHub 自动提供 |
+| `LITELLM_API_KEY` | Secret | ❌ 推荐 | LLM API 密钥 |
+| `LITELLM_MODEL` | Variable | ❌ 可选 | 默认 `deepseek/deepseek-chat` |
+
+支持的模型：`deepseek/deepseek-chat`, `anthropic/claude-3-5-sonnet`, `openai/gpt-4`, `xai/grok-beta`
+
+---
+
+## 🔗 GitNexus 集成（可选）
+
+GitNexus 提供代码知识图谱分析能力，增强 AI 审查的上下文理解。
+
+**前置要求**:
+```bash
+npm install -g gitnexus
+```
+
+**工作原理**:
+1. GitNexus 分析代码库构建知识图谱
+2. AI 审查时获取函数的调用关系（callers/callees）
+3. 识别潜在的副作用和依赖关系
+
+**配置**:
+```bash
+export CONSISTENCY_GITNEXUS_ENABLED=true
+```
+
+> 注意：没有 GitNexus 时工具仍可正常运行，只是缺少上下文增强功能。
 
 ---
 
@@ -218,26 +236,31 @@ jobs:
 |------|------|------|
 | `CONSISTENCY_GITHUB_TOKEN` | GitHub Token，用于 PR 评论 | CI 模式必需 |
 | `CONSISTENCY_LITELLM_API_KEY` | LLM API 密钥 | 可选，用于 AI 审查 |
-| `CONSISTENCY_LITELLM_MODEL` | 模型名称，默认 `deepseek/deepseek-chat` | 可选 |
+| `CONSISTENCY_LITELLM_MODEL` | 模型名称 | 可选 |
 | `CONSISTENCY_GITNEXUS_ENABLED` | 是否启用 GitNexus | 可选，默认 `false` |
-| `CONSISTENCY_QUICK_MODE` | 快速模式（只运行 SecurityAgent） | 可选，默认 `false` |
+| `CONSISTENCY_QUICK_MODE` | 快速模式默认开启 | 可选，默认 `false` |
 
 ---
 
-## 🔗 GitNexus 集成（可选）
+## 🧪 开发
 
-GitNexus 提供代码知识图谱分析能力，增强 AI 审查的上下文理解。
+```bash
+# 克隆仓库
+git clone https://github.com/sk1ua/GitConsistency.git
+cd GitConsistency
 
-**前置要求**：
-1. 安装 GitNexus CLI：`npm install -g gitnexus`
-2. 启用环境变量：`export CONSISTENCY_GITNEXUS_ENABLED=true`
+# 安装开发依赖
+uv sync
 
-**工作原理**：
-- GitNexus 分析代码库构建知识图谱
-- AI 审查时获取函数的调用关系（callers/callees）
-- 识别潜在的副作用和依赖关系
+# 运行测试
+pytest -v
 
-**注意**：没有 GitNexus 时工具仍可正常运行，只是缺少上下文增强功能。
+# 代码检查
+ruff check .
+mypy consistency/
+```
+
+详见 [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
