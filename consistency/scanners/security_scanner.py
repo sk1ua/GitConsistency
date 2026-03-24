@@ -369,12 +369,21 @@ class SecurityScanner(BaseScanner):
             )
             stdout, stderr = await proc.communicate()
 
-            if proc.returncode not in (0, 1):
-                err_msg = stderr.decode().strip()
-                if err_msg:
-                    errors.append(f"Bandit 错误 (exit {proc.returncode}): {err_msg}")
+            stdout_str = stdout.decode().strip()
+            stderr_str = stderr.decode().strip()
 
-            result = json.loads(stdout.decode())
+            # Bandit 在找不到文件或出错时会输出到 stderr
+            if stderr_str and proc.returncode not in (0, 1):
+                errors.append(f"Bandit 错误 (exit {proc.returncode}): {stderr_str}")
+                return findings, 0, errors
+
+            # 如果 stdout 为空，说明没有扫描结果
+            if not stdout_str:
+                if stderr_str:
+                    logger.warning(f"Bandit: {stderr_str}")
+                return findings, 0, errors
+
+            result = json.loads(stdout_str)
             findings, scanned_files = self._parse_bandit_results(result)
 
         except FileNotFoundError:
