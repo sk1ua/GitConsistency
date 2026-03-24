@@ -42,6 +42,7 @@ dependencies = [
 [project.optional-dependencies]
 # 安全扫描
 security = [
+    "setuptools>=69.0.0",  # 提供 pkg_resources，semgrep 依赖
     "semgrep>=1.52.0",
     "bandit[toml]>=1.7.6",
     "safety>=3.0.0",
