@@ -5,16 +5,11 @@
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 from typer.testing import CliRunner
 
 from consistency.cli.main import app
-from consistency.config import Settings, get_settings
-
+from consistency.config import Settings
 
 runner = CliRunner()
 

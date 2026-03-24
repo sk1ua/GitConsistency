@@ -108,11 +108,13 @@ def _run_ci_command(
         generator = ReportGenerator()
 
         # 1. 输出 PR 评论
-        comment = generator.generate_github_comment(
-            scan_results=list(result["results"].values()),
-            ai_review=result.get("ai_review"),
-            agent_reviews=result.get("agent_reviews"),
-            project_name=repo.split("/")[-1],
+        comment = asyncio.run(
+            generator.generate_github_comment(
+                scan_results=list(result["results"].values()),
+                ai_review=result.get("ai_review"),
+                agent_reviews=result.get("agent_reviews"),
+                project_name=repo.split("/")[-1],
+            )
         )
 
         if dry_run:
@@ -200,21 +202,22 @@ async def _run_analysis(
 
     # 多 Agent 审查（优先使用）
     if use_agents and not skip_ai:
+        import time
+
         from consistency.agents import ReviewSupervisor
         from consistency.core.gitnexus_client import GitNexusClient
-
-        import time
 
         agent_start = time.perf_counter()
         console.print("[blue]🤖 启用多 Agent 智能审查...[/blue]")
 
-        # 初始化 GitNexus
-        gitnexus = None
-        if GitNexusClient.is_available():
-            gitnexus = GitNexusClient()
-            console.print("[green]✓[/green] GitNexus 代码知识图谱已启用")
-        else:
-            console.print("[yellow]! GitNexus 未安装，跳过代码上下文分析[/yellow]")
+        # 初始化 GitNexus（现在为必需）
+        if not GitNexusClient.is_available():
+            console.print("[red]✗ GitNexus 未安装，但它是必需的组件[/red]")
+            console.print("[dim]请安装 GitNexus: npm install -g gitnexus[/dim]")
+            raise Exception("Exit 1")
+
+        gitnexus = GitNexusClient()
+        console.print("[green]✓[/green] GitNexus 代码知识图谱已启用")
 
         # 创建 Supervisor 并运行多 Agent 审查
         supervisor = ReviewSupervisor(
@@ -374,11 +377,13 @@ def _write_actions_summary(
         from consistency.github import write_actions_summary
 
         # 1. 写入扫描摘要
-        summary = generator.generate_actions_summary(
-            scan_results=list(result["results"].values()),
-            duration_ms=result.get("duration_ms", 0),
-            ai_review=result.get("ai_review"),
-            project_name=repo.split("/")[-1],
+        summary = asyncio.run(
+            generator.generate_actions_summary(
+                scan_results=list(result["results"].values()),
+                duration_ms=result.get("duration_ms", 0),
+                ai_review=result.get("ai_review"),
+                project_name=repo.split("/")[-1],
+            )
         )
         write_actions_summary(summary)
 

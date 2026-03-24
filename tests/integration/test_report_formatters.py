@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -16,7 +15,8 @@ from consistency.report.formatters.json import JsonFormatter
 from consistency.report.formatters.markdown import MarkdownFormatter
 from consistency.report.generator import ReportGenerator
 from consistency.report.templates import ReportFormat, ReportTheme
-from consistency.reviewer.models import ReviewComment, ReviewResult, Severity as ReviewSeverity
+from consistency.reviewer.models import ReviewComment, ReviewResult
+from consistency.reviewer.models import Severity as ReviewSeverity
 from consistency.scanners.base import Finding, ScanResult, Severity
 
 

@@ -40,10 +40,12 @@ class TestSecurityScannerInit:
 
     def test_config_override(self) -> None:
         """测试配置覆盖."""
-        scanner = SecurityScanner(config={
-            "exclude": ["test*.py"],
-            "exclude_dirs": ["tests"],
-        })
+        scanner = SecurityScanner(
+            config={
+                "exclude": ["test*.py"],
+                "exclude_dirs": ["tests"],
+            }
+        )
         assert scanner.semgrep_config.exclude == ["test*.py"]
         assert scanner.bandit_config.exclude_dirs == ["tests"]
 
@@ -235,30 +237,38 @@ class TestScanExecution:
         scanner = SecurityScanner()
 
         # Mock Semgrep 结果
-        semgrep_mock = ([
-            Finding(
-                rule_id="SEM-001",
-                message="Semgrep issue",
-                severity=Severity.HIGH,
-                file_path=Path("src/file.py"),
-                line=1,
-            ),
-        ], 10, [])
+        semgrep_mock = (
+            [
+                Finding(
+                    rule_id="SEM-001",
+                    message="Semgrep issue",
+                    severity=Severity.HIGH,
+                    file_path=Path("src/file.py"),
+                    line=1,
+                ),
+            ],
+            10,
+            [],
+        )
 
         # Mock Bandit 结果
-        bandit_mock = ([
-            Finding(
-                rule_id="B001",
-                message="Bandit issue",
-                severity=Severity.MEDIUM,
-                file_path=Path("src/file.py"),
-                line=2,
-            ),
-        ], 10, [])
+        bandit_mock = (
+            [
+                Finding(
+                    rule_id="B001",
+                    message="Bandit issue",
+                    severity=Severity.MEDIUM,
+                    file_path=Path("src/file.py"),
+                    line=2,
+                ),
+            ],
+            10,
+            [],
+        )
 
-        with patch.object(scanner, "_run_semgrep", new_callable=AsyncMock) as mock_semgrep, \
-             patch.object(scanner, "_run_bandit", new_callable=AsyncMock) as mock_bandit:
-
+        with patch.object(scanner, "_run_semgrep", new_callable=AsyncMock) as mock_semgrep, patch.object(
+            scanner, "_run_bandit", new_callable=AsyncMock
+        ) as mock_bandit:
             mock_semgrep.return_value = semgrep_mock
             mock_bandit.return_value = bandit_mock
 
@@ -273,9 +283,9 @@ class TestScanExecution:
         """测试部分失败处理."""
         scanner = SecurityScanner()
 
-        with patch.object(scanner, "_run_semgrep", new_callable=AsyncMock) as mock_semgrep, \
-             patch.object(scanner, "_run_bandit", new_callable=AsyncMock) as mock_bandit:
-
+        with patch.object(scanner, "_run_semgrep", new_callable=AsyncMock) as mock_semgrep, patch.object(
+            scanner, "_run_bandit", new_callable=AsyncMock
+        ) as mock_bandit:
             # Semgrep 成功，Bandit 失败
             mock_semgrep.return_value = ([], 5, [])
             mock_bandit.side_effect = Exception("Bandit crashed")

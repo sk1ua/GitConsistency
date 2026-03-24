@@ -6,12 +6,12 @@ import pytest
 from pydantic import ValidationError
 
 from consistency.config import (
-    LLMConfig,
+    CacheConfig,
     GitHubConfig,
     GitNexusConfig,
-    ScannerConfig,
-    CacheConfig,
+    LLMConfig,
     PerformanceConfig,
+    ScannerConfig,
     Settings,
     get_settings,
     reload_settings,

@@ -83,10 +83,12 @@ class TestScannerOrchestrator:
         orchestrator = ScannerOrchestrator()
 
         mock_scanner = MagicMock()
-        mock_scanner.scan = AsyncMock(return_value=ScanResult(
-            scanner_name="test",
-            findings=[Finding(rule_id="R1", message="Test", severity=Severity.HIGH)],
-        ))
+        mock_scanner.scan = AsyncMock(
+            return_value=ScanResult(
+                scanner_name="test",
+                findings=[Finding(rule_id="R1", message="Test", severity=Severity.HIGH)],
+            )
+        )
 
         orchestrator.register_scanner("test", mock_scanner)
 
@@ -103,10 +105,12 @@ class TestScannerOrchestrator:
 
         for name in ["s1", "s2", "s3"]:
             mock_scanner = MagicMock()
-            mock_scanner.scan = AsyncMock(return_value=ScanResult(
-                scanner_name=name,
-                findings=[],
-            ))
+            mock_scanner.scan = AsyncMock(
+                return_value=ScanResult(
+                    scanner_name=name,
+                    findings=[],
+                )
+            )
             orchestrator.register_scanner(name, mock_scanner)
 
         report = await orchestrator.scan(Path("./test"))
@@ -121,10 +125,12 @@ class TestScannerOrchestrator:
 
         for name in ["s1", "s2", "s3"]:
             mock_scanner = MagicMock()
-            mock_scanner.scan = AsyncMock(return_value=ScanResult(
-                scanner_name=name,
-                findings=[],
-            ))
+            mock_scanner.scan = AsyncMock(
+                return_value=ScanResult(
+                    scanner_name=name,
+                    findings=[],
+                )
+            )
             orchestrator.register_scanner(name, mock_scanner)
 
         report = await orchestrator.scan(Path("./test"), skip_scanners=["s2"])
@@ -140,10 +146,12 @@ class TestScannerOrchestrator:
 
         for name in ["s1", "s2", "s3"]:
             mock_scanner = MagicMock()
-            mock_scanner.scan = AsyncMock(return_value=ScanResult(
-                scanner_name=name,
-                findings=[],
-            ))
+            mock_scanner.scan = AsyncMock(
+                return_value=ScanResult(
+                    scanner_name=name,
+                    findings=[],
+                )
+            )
             orchestrator.register_scanner(name, mock_scanner)
 
         report = await orchestrator.scan(Path("./test"), scanners=["s1", "s3"])
@@ -159,10 +167,12 @@ class TestScannerOrchestrator:
 
         # 成功的扫描器
         success_scanner = MagicMock()
-        success_scanner.scan = AsyncMock(return_value=ScanResult(
-            scanner_name="success",
-            findings=[],
-        ))
+        success_scanner.scan = AsyncMock(
+            return_value=ScanResult(
+                scanner_name="success",
+                findings=[],
+            )
+        )
 
         # 失败的扫描器
         fail_scanner = MagicMock()

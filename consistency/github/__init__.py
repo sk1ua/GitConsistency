@@ -26,7 +26,8 @@ from consistency.github.ci_utils import (
 from consistency.github.client import GitHubClient
 from consistency.github.comments import CommentManager, PRComment
 from consistency.github.labels import LabelManager
-from consistency.github.utils import detect_from_env, is_github_actions as _is_github_actions, parse_pr_url
+from consistency.github.utils import detect_from_env, parse_pr_url
+from consistency.github.utils import is_github_actions as _is_github_actions
 
 
 class GitHubIntegration:

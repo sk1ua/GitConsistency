@@ -22,16 +22,19 @@ class TestFullWorkflow:
             project.mkdir()
 
             # 创建 Python 文件
-            (project / "main.py").write_text("""
+            (project / "main.py").write_text(
+                """
 def hello():
     print("Hello, World!")
 
 if __name__ == "__main__":
     hello()
-""")
+"""
+            )
 
             # 创建有问题的文件（用于测试）
-            (project / "issues.py").write_text("""
+            (project / "issues.py").write_text(
+                """
 import os
 
 def insecure_function(password):
@@ -39,15 +42,19 @@ def insecure_function(password):
     if password == "secret123":
         return True
     return False
-""")
+"""
+            )
 
             # 初始化 git
             import subprocess
-            subprocess.run(["git", "init"], cwd=project, capture_output=True)
-            subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=project, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test"], cwd=project, capture_output=True)
-            subprocess.run(["git", "add", "."], cwd=project, capture_output=True)
-            subprocess.run(["git", "commit", "-m", "initial"], cwd=project, capture_output=True)
+
+            subprocess.run(["git", "init"], cwd=project, capture_output=True, check=False)
+            subprocess.run(
+                ["git", "config", "user.email", "test@test.com"], cwd=project, capture_output=True, check=False
+            )
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=project, capture_output=True, check=False)
+            subprocess.run(["git", "add", "."], cwd=project, capture_output=True, check=False)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=project, capture_output=True, check=False)
 
             yield project
 

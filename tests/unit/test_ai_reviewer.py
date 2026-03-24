@@ -70,20 +70,22 @@ class TestReview:
     @pytest.fixture
     def mock_llm_response(self) -> str:
         """Mock LLM 响应."""
-        return json.dumps({
-            "summary": "Test review summary",
-            "severity": "medium",
-            "comments": [
-                {
-                    "file": "test.py",
-                    "line": 10,
-                    "message": "Test issue",
-                    "severity": "medium",
-                    "category": "style",
-                }
-            ],
-            "action_items": ["Fix the issue"],
-        })
+        return json.dumps(
+            {
+                "summary": "Test review summary",
+                "severity": "medium",
+                "comments": [
+                    {
+                        "file": "test.py",
+                        "line": 10,
+                        "message": "Test issue",
+                        "severity": "medium",
+                        "category": "style",
+                    }
+                ],
+                "action_items": ["Fix the issue"],
+            }
+        )
 
     @pytest.mark.asyncio
     async def test_review_success(
@@ -201,12 +203,14 @@ class TestParseResponse:
 
     def test_parse_valid_json(self, reviewer: AIReviewer) -> None:
         """测试解析有效 JSON."""
-        content = json.dumps({
-            "summary": "Good code",
-            "severity": "low",
-            "comments": [],
-            "action_items": [],
-        })
+        content = json.dumps(
+            {
+                "summary": "Good code",
+                "severity": "low",
+                "comments": [],
+                "action_items": [],
+            }
+        )
 
         result = reviewer._parse_response(content)
 
@@ -245,27 +249,29 @@ Please fix this.
 
     def test_parse_with_comments(self, reviewer: AIReviewer) -> None:
         """测试解析带评论的响应."""
-        content = json.dumps({
-            "summary": "Issues found",
-            "severity": "high",
-            "comments": [
-                {
-                    "file": "test.py",
-                    "line": 10,
-                    "message": "Security issue",
-                    "severity": "critical",
-                    "category": "security",
-                    "confidence": 0.95,
-                },
-                {
-                    "file": "other.py",
-                    "line": 20,
-                    "message": "Style issue",
-                    "severity": "low",
-                    "category": "style",
-                },
-            ],
-        })
+        content = json.dumps(
+            {
+                "summary": "Issues found",
+                "severity": "high",
+                "comments": [
+                    {
+                        "file": "test.py",
+                        "line": 10,
+                        "message": "Security issue",
+                        "severity": "critical",
+                        "category": "security",
+                        "confidence": 0.95,
+                    },
+                    {
+                        "file": "other.py",
+                        "line": 20,
+                        "message": "Style issue",
+                        "severity": "low",
+                        "category": "style",
+                    },
+                ],
+            }
+        )
 
         result = reviewer._parse_response(content)
 
@@ -308,17 +314,16 @@ class TestReviewBatch:
         """测试批量审查."""
         reviewer = AIReviewer(model="test")
 
-        contexts = [
-            ReviewContext(diff=f"diff {i}")
-            for i in range(5)
-        ]
+        contexts = [ReviewContext(diff=f"diff {i}") for i in range(5)]
 
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "summary": "OK",
-            "severity": "low",
-            "comments": [],
-        })
+        mock_response.content = json.dumps(
+            {
+                "summary": "OK",
+                "severity": "low",
+                "comments": [],
+            }
+        )
         mock_response.usage = {"total_tokens": 50}
 
         mock_provider = AsyncMock()
@@ -348,11 +353,13 @@ class TestReviewWithFallback:
 
         mock_fallback = AsyncMock()
         mock_fallback.complete_json.return_value = MagicMock(
-            content=json.dumps({
-                "summary": "Fallback review",
-                "severity": "low",
-                "comments": [],
-            }),
+            content=json.dumps(
+                {
+                    "summary": "Fallback review",
+                    "severity": "low",
+                    "comments": [],
+                }
+            ),
             usage={"total_tokens": 50},
         )
 
@@ -376,11 +383,13 @@ class TestReviewWithFallback:
         )
 
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "summary": "OK",
-            "severity": "low",
-            "comments": [],
-        })
+        mock_response.content = json.dumps(
+            {
+                "summary": "OK",
+                "severity": "low",
+                "comments": [],
+            }
+        )
         mock_response.usage = {"total_tokens": 50}
 
         mock_provider = AsyncMock()

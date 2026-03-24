@@ -28,13 +28,15 @@ class TestCLIWorkflow:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
             # 创建一个简单的 Python 文件
-            (path / "main.py").write_text("""
+            (path / "main.py").write_text(
+                """
 def hello():
     print("Hello World")
 
 if __name__ == "__main__":
     hello()
-""")
+"""
+            )
             yield path
 
     def test_settings_loading(self) -> None:

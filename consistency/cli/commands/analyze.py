@@ -83,13 +83,15 @@ def _run_analyze_command(
         }
         report_format = format_map.get(format, ReportFormat.MARKDOWN)
 
-        report = generator.generate(
-            scan_results=list(result["results"].values()),
-            ai_review=result.get("ai_review"),
-            project_name=path.resolve().name or "Unknown",
-            format=report_format,
-            commit_sha=result.get("commit_sha", "unknown"),
-            duration=result["duration_ms"] / 1000,
+        report = asyncio.run(
+            generator.generate(
+                scan_results=list(result["results"].values()),
+                ai_review=result.get("ai_review"),
+                project_name=path.resolve().name or "Unknown",
+                format=report_format,
+                commit_sha=result.get("commit_sha", "unknown"),
+                duration=result["duration_ms"] / 1000,
+            )
         )
 
         if output:

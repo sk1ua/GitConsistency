@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from consistency.agents.base import Severity
+from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +208,7 @@ class IncrementalReviewer:
         diff_text: str,
         repo_path: Path | str,
         supervisor: Any | None = None,
+        gitnexus_client: GitNexusClient | None = None,
     ) -> dict[str, Any]:
         """审查 diff.
 
@@ -214,6 +216,7 @@ class IncrementalReviewer:
             diff_text: git diff 输出
             repo_path: 代码库路径
             supervisor: ReviewSupervisor 实例（可选）
+            gitnexus_client: GitNexus 客户端（可选，如果不提供则尝试自动获取）
 
         Returns:
             审查结果
@@ -221,7 +224,14 @@ class IncrementalReviewer:
         from consistency.agents import ReviewSupervisor
 
         if supervisor is None:
-            supervisor = ReviewSupervisor(quick_mode=True)
+            gnc = gitnexus_client or get_gitnexus_client()
+            if not gnc.is_available():
+                raise ValueError(
+                    "GitNexus 客户端不可用。请确保:\n"
+                    "1. 已安装 GitNexus: npm install -g gitnexus\n"
+                    "2. 已设置环境变量: export CONSISTENCY_GITNEXUS_ENABLED=true"
+                )
+            supervisor = ReviewSupervisor(gitnexus_client=gnc, quick_mode=True)
 
         # 1. 解析 diff
         file_diffs = self.diff_parser.parse(diff_text)
@@ -268,7 +278,7 @@ class IncrementalReviewer:
                     "changes": self._summarize_changes(fd),
                     "review": r,
                 }
-                for (fp, _, fd), r in zip(review_tasks, results)
+                for (fp, _, fd), r in zip(review_tasks, results, strict=False)
             ],
         }
 
@@ -329,11 +339,22 @@ Returns:
     关键问题列表（最多 5 个）
 """
 
-    def __init__(self) -> None:
-        """初始化."""
+    def __init__(self, gitnexus_client: GitNexusClient | None = None) -> None:
+        """初始化.
+
+        Args:
+            gitnexus_client: GitNexus 客户端（可选，如果不提供则尝试自动获取）
+        """
         from consistency.agents import ReviewSupervisor
 
-        self.supervisor = ReviewSupervisor(quick_mode=True)
+        gnc = gitnexus_client or get_gitnexus_client()
+        if not gnc.is_available():
+            raise ValueError(
+                "GitNexus 客户端不可用。请确保:\n"
+                "1. 已安装 GitNexus: npm install -g gitnexus\n"
+                "2. 已设置环境变量: export CONSISTENCY_GITNEXUS_ENABLED=true"
+            )
+        self.supervisor = ReviewSupervisor(gitnexus_client=gnc, quick_mode=True)
 
     async def review_code(
         self,

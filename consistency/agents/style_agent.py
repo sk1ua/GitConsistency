@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from consistency.agents.base import AgentResult, BaseAgent
+from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import CommentCategory, ReviewComment, Severity
 
 logger = logging.getLogger(__name__)
@@ -21,13 +22,18 @@ class StyleAgent(BaseAgent):
     检查代码风格、命名规范、PEP8 等问题.
 
     Examples:
-        >>> agent = StyleAgent()
+        >>> agent = StyleAgent(gitnexus_client)
         >>> result = await agent.analyze(Path("main.py"), code)
     """
 
-    def __init__(self) -> None:
-        """初始化."""
+    def __init__(self, gitnexus_client: GitNexusClient) -> None:
+        """初始化.
+
+        Args:
+            gitnexus_client: GitNexus 客户端（必需）
+        """
         super().__init__()
+        self.gitnexus = gitnexus_client
 
     @property
     def name(self) -> str:

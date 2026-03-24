@@ -1,12 +1,12 @@
 """GitHub 集成单元测试."""
 
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consistency.github import GitHubIntegration, PRComment
 from consistency.exceptions import GitHubError
+from consistency.github import GitHubIntegration, PRComment
 
 
 class TestGitHubIntegrationInit:
@@ -190,9 +190,7 @@ class TestFileComments:
         mock_gh.get_repo.return_value = mock_repo
 
         with patch.object(github.client, "get_client", return_value=mock_gh):
-            result = await github.post_file_comment(
-                "owner/repo", 1, "src/main.py", 42, "Issue here"
-            )
+            result = await github.post_file_comment("owner/repo", 1, "src/main.py", 42, "Issue here")
 
             assert result["id"] == 123
             mock_pr.create_review_comment.assert_called_once()
@@ -212,9 +210,9 @@ class TestBatchComments:
         ]
 
         # Mock the underlying methods
-        with patch.object(github.comments, "post_comment", return_value={"id": 1}) as mock_post, \
-             patch.object(github.comments, "post_file_comment", return_value={"id": 2}) as mock_file:
-
+        with patch.object(github.comments, "post_comment", return_value={"id": 1}) as mock_post, patch.object(
+            github.comments, "post_file_comment", return_value={"id": 2}
+        ) as mock_file:
             results = await github.post_comments_batch("owner/repo", 1, comments, max_concurrent=2)
 
             assert len(results) == 2

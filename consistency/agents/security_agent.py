@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from consistency.agents.base import AgentResult, BaseAgent
-from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
+from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import CommentCategory, ReviewComment, Severity
 from consistency.scanners.security_scanner import SecurityScanner
 
@@ -22,26 +22,30 @@ class SecurityAgent(BaseAgent):
     结合 Semgrep、Bandit 和 GitNexus 调用链分析进行安全审查.
 
     Examples:
-        >>> agent = SecurityAgent()
+        >>> agent = SecurityAgent(gitnexus_client)
         >>> result = await agent.analyze(Path("main.py"), code)
         >>> print(result.summary)
     """
 
     def __init__(
         self,
-        gitnexus_client: GitNexusClient | None = None,
-        use_gitnexus: bool = True,
+        gitnexus_client: GitNexusClient,
     ) -> None:
         """初始化.
 
         Args:
-            gitnexus_client: GitNexus 客户端
-            use_gitnexus: 是否使用 GitNexus 增强
+            gitnexus_client: GitNexus 客户端（必需）
+
+        Raises:
+            ValueError: 如果 gitnexus_client 不可用
         """
         super().__init__()
         self.scanner = SecurityScanner()
-        self.gitnexus = gitnexus_client or get_gitnexus_client()
-        self.use_gitnexus = use_gitnexus and self.gitnexus.is_available()
+        if gitnexus_client is None:
+            raise ValueError("SecurityAgent 需要 GitNexus 客户端")
+        if not gitnexus_client.is_available():
+            raise ValueError("GitNexus 客户端不可用")
+        self.gitnexus = gitnexus_client
 
     @property
     def name(self) -> str:
@@ -87,14 +91,13 @@ class SecurityAgent(BaseAgent):
         except Exception as e:
             logger.warning(f"安全扫描失败: {e}")
 
-        # 2. GitNexus 增强（如果有）
-        if self.use_gitnexus:
-            try:
-                gitnexus_findings = await self._analyze_with_gitnexus(file_path, code)
-                all_findings.extend(gitnexus_findings)
-                metadata["sources"].append("gitnexus")
-            except Exception as e:
-                logger.warning(f"GitNexus 分析失败: {e}")
+        # 2. GitNexus 增强（现在为必需）
+        try:
+            gitnexus_findings = await self._analyze_with_gitnexus(file_path, code)
+            all_findings.extend(gitnexus_findings)
+            metadata["sources"].append("gitnexus")
+        except Exception as e:
+            logger.warning(f"GitNexus 分析失败: {e}")
 
         # 3. 转换为 comments
         comments = self._convert_to_comments(all_findings)

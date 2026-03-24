@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from consistency.agents.base import AgentResult, BaseAgent
-from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
+from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import CommentCategory, ReviewComment, Severity
 
 logger = logging.getLogger(__name__)
@@ -21,20 +21,29 @@ class LogicAgent(BaseAgent):
     检查代码逻辑缺陷、边界条件、错误处理等问题.
 
     Examples:
-        >>> agent = LogicAgent()
+        >>> agent = LogicAgent(gitnexus_client)
         >>> result = await agent.analyze(Path("main.py"), code)
         >>> print(result.comments)
     """
 
     def __init__(
         self,
-        gitnexus_client: GitNexusClient | None = None,
-        use_gitnexus: bool = True,
+        gitnexus_client: GitNexusClient,
     ) -> None:
-        """初始化."""
+        """初始化.
+
+        Args:
+            gitnexus_client: GitNexus 客户端（必需）
+
+        Raises:
+            ValueError: 如果 gitnexus_client 不可用
+        """
         super().__init__()
-        self.gitnexus = gitnexus_client or get_gitnexus_client()
-        self.use_gitnexus = use_gitnexus and self.gitnexus.is_available()
+        if gitnexus_client is None:
+            raise ValueError("LogicAgent 需要 GitNexus 客户端")
+        if not gitnexus_client.is_available():
+            raise ValueError("GitNexus 客户端不可用")
+        self.gitnexus = gitnexus_client
 
     @property
     def name(self) -> str:
@@ -63,13 +72,12 @@ class LogicAgent(BaseAgent):
         # 2. 代码质量检查
         findings.extend(self._check_code_quality(code, file_path))
 
-        # 3. GitNexus 增强（检查复杂调用链）
-        if self.use_gitnexus:
-            try:
-                gitnexus_findings = await self._analyze_call_chains(file_path, code)
-                findings.extend(gitnexus_findings)
-            except Exception as e:
-                logger.debug(f"GitNexus 调用链分析失败: {e}")
+        # 3. GitNexus 增强（检查复杂调用链，现在为必需）
+        try:
+            gitnexus_findings = await self._analyze_call_chains(file_path, code)
+            findings.extend(gitnexus_findings)
+        except Exception as e:
+            logger.debug(f"GitNexus 调用链分析失败: {e}")
 
         # 4. 生成结果
         comments = self._convert_to_comments(findings, file_path)

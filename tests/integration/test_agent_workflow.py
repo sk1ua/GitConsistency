@@ -16,7 +16,6 @@ from consistency.agents.security_agent import SecurityAgent
 from consistency.agents.style_agent import StyleAgent
 from consistency.agents.supervisor import ReviewSupervisor, review_code, review_files
 from consistency.agents.synthesis_agent import SynthesisAgent
-from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import ReviewComment, ReviewResult
 
 
@@ -66,14 +65,12 @@ class TestSecurityAgentIntegration:
         return SecurityAgent(gitnexus_client)
 
     @pytest.mark.asyncio
-    async def test_security_agent_analyze_safe_code(
-        self, security_agent: SecurityAgent
-    ) -> None:
+    async def test_security_agent_analyze_safe_code(self, security_agent: SecurityAgent) -> None:
         """测试分析安全代码."""
-        code = '''
+        code = """
 def hello():
     print("Hello World")
-'''
+"""
         result = await security_agent.analyze(Path("test.py"), code)
 
         assert isinstance(result, AgentResult)
@@ -81,17 +78,15 @@ def hello():
         assert result.severity in (Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL)
 
     @pytest.mark.asyncio
-    async def test_security_agent_analyze_vulnerable_code(
-        self, security_agent: SecurityAgent
-    ) -> None:
+    async def test_security_agent_analyze_vulnerable_code(self, security_agent: SecurityAgent) -> None:
         """测试分析包含漏洞的代码."""
-        code = '''
+        code = """
 import os
 
 def insecure(user_input):
     eval(user_input)  # 危险！
     os.system(user_input)  # 命令注入风险
-'''
+"""
         result = await security_agent.analyze(Path("test.py"), code)
 
         assert isinstance(result, AgentResult)
@@ -116,7 +111,7 @@ class TestLogicAgentIntegration:
     @pytest.mark.asyncio
     async def test_logic_agent_analyze(self, logic_agent: LogicAgent) -> None:
         """测试逻辑分析."""
-        code = '''
+        code = """
 def complex_function(n):
     if n > 0:
         if n % 2 == 0:
@@ -124,7 +119,7 @@ def complex_function(n):
         else:
             return n * 3 + 1
     return 0
-'''
+"""
         result = await logic_agent.analyze(Path("test.py"), code)
 
         assert isinstance(result, AgentResult)
@@ -142,11 +137,11 @@ class TestStyleAgentIntegration:
     @pytest.mark.asyncio
     async def test_style_agent_analyze(self, style_agent: StyleAgent) -> None:
         """测试风格分析."""
-        code = '''
+        code = """
 def BadFunctionName():
     x=1+2
     return x
-'''
+"""
         result = await style_agent.analyze(Path("test.py"), code)
 
         assert isinstance(result, AgentResult)
@@ -284,10 +279,10 @@ class TestReviewSupervisorIntegration:
     @pytest.mark.asyncio
     async def test_review_single_file(self, supervisor: ReviewSupervisor) -> None:
         """测试单文件审查."""
-        code = '''
+        code = """
 def hello():
     print("Hello")
-'''
+"""
         result = await supervisor.review(Path("test.py"), code)
 
         assert isinstance(result, ReviewResult)
@@ -338,9 +333,7 @@ class TestReviewConvenienceFunctions:
     @pytest.mark.asyncio
     async def test_review_code(self) -> None:
         """测试 review_code 便捷函数."""
-        with patch(
-            "consistency.agents.supervisor.ReviewSupervisor.review"
-        ) as mock_review:
+        with patch("consistency.agents.supervisor.ReviewSupervisor.review") as mock_review:
             mock_review.return_value = ReviewResult(
                 summary="Test",
                 severity=Severity.LOW,
@@ -354,9 +347,7 @@ class TestReviewConvenienceFunctions:
     @pytest.mark.asyncio
     async def test_review_files(self) -> None:
         """测试 review_files 便捷函数."""
-        with patch(
-            "consistency.agents.supervisor.ReviewSupervisor.review_batch"
-        ) as mock_batch:
+        with patch("consistency.agents.supervisor.ReviewSupervisor.review_batch") as mock_batch:
             mock_batch.return_value = [
                 ReviewResult(summary="Test1", severity=Severity.LOW),
                 ReviewResult(summary="Test2", severity=Severity.LOW),
@@ -382,5 +373,5 @@ class TestAgentSeverity:
 
     def test_severity_equality(self) -> None:
         """测试 Severity 相等性."""
-        assert Severity.LOW == Severity("low")
-        assert Severity.HIGH == Severity("high")
+        assert Severity("low") == Severity.LOW
+        assert Severity("high") == Severity.HIGH

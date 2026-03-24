@@ -5,15 +5,16 @@
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from consistency.llm import LLMConfig, LLMProviderFactory
 from consistency.llm.base import BaseLLMProvider, LLMResponse
 from consistency.llm.providers.litellm import LiteLLMProvider
 from consistency.reviewer.ai_reviewer import AIReviewer
 from consistency.reviewer.models import ReviewResult, Severity
-from consistency.reviewer.prompts import ReviewContext, ReviewType
+from consistency.reviewer.prompts import ReviewContext
 
 
 class TestLLMProviderFactory:
@@ -257,8 +258,9 @@ class TestAIReviewerWithProvider:
         assert reviewer.get_stats()["memory_cache_size"] == 0
 
         # 手动添加缓存
-        from consistency.reviewer.models import ReviewResult
         from consistency.reviewer.ai_reviewer import ReviewCache
+        from consistency.reviewer.models import ReviewResult
+
         result = ReviewResult(summary="Test", severity=Severity.LOW)
         reviewer._result_cache["test-key"] = ReviewCache(
             result=result,

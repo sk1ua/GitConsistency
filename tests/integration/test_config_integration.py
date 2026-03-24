@@ -29,10 +29,12 @@ class TestConfigIntegration:
         """测试 .env 文件加载."""
         env_file = tmp_path / ".env"
         # 使用嵌套分隔符 __ 设置嵌套配置
-        env_file.write_text("""
+        env_file.write_text(
+            """
 CONSISTENCY_LLM__MODEL=test-model
 CONSISTENCY_LOGGING__LEVEL=DEBUG
-""")
+"""
+        )
 
         # 创建新的 settings 实例，强制重新加载
         settings = Settings(_env_file=str(env_file))

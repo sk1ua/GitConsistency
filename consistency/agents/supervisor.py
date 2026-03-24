@@ -12,7 +12,7 @@ from consistency.agents.logic_agent import LogicAgent
 from consistency.agents.security_agent import SecurityAgent
 from consistency.agents.style_agent import StyleAgent
 from consistency.agents.synthesis_agent import SynthesisAgent
-from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
+from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import ReviewResult
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class ReviewSupervisor:
 
     def __init__(
         self,
-        gitnexus_client: GitNexusClient | None = None,
+        gitnexus_client: GitNexusClient,
         enable_security: bool = True,
         enable_logic: bool = True,
         enable_style: bool = True,
@@ -40,13 +40,28 @@ class ReviewSupervisor:
         """初始化 Supervisor.
 
         Args:
-            gitnexus_client: GitNexus 客户端
+            gitnexus_client: GitNexus 客户端（必需）
             enable_security: 启用安全审查
             enable_logic: 启用逻辑审查
             enable_style: 启用风格审查
             quick_mode: 快速模式（仅安全审查）
+
+        Raises:
+            ValueError: 如果 gitnexus_client 为 None 或不可用
         """
-        self.gitnexus = gitnexus_client or get_gitnexus_client()
+        if gitnexus_client is None:
+            raise ValueError(
+                "GitNexus 客户端是必需的。请提供有效的 GitNexusClient 实例。\n"
+                "使用指南: npm install -g gitnexus && export CONSISTENCY_GITNEXUS_ENABLED=true"
+            )
+        if not gitnexus_client.is_available():
+            raise ValueError(
+                "GitNexus 客户端不可用。请确保:\n"
+                "1. 已安装 GitNexus: npm install -g gitnexus\n"
+                "2. 已设置环境变量: export CONSISTENCY_GITNEXUS_ENABLED=true"
+            )
+
+        self.gitnexus = gitnexus_client
         self.quick_mode = quick_mode
 
         # 初始化各 Agent
@@ -62,7 +77,7 @@ class ReviewSupervisor:
             if enable_logic:
                 self.agents["logic"] = LogicAgent(self.gitnexus)
             if enable_style:
-                self.agents["style"] = StyleAgent()
+                self.agents["style"] = StyleAgent(self.gitnexus)
 
         self.synthesis_agent = SynthesisAgent()
 
@@ -182,6 +197,7 @@ class ReviewSupervisor:
 async def review_code(
     file_path: Path,
     code: str,
+    gitnexus_client: GitNexusClient,
     quick: bool = False,
 ) -> ReviewResult:
     """便捷函数：审查代码.
@@ -189,27 +205,30 @@ async def review_code(
     Args:
         file_path: 文件路径
         code: 代码内容
+        gitnexus_client: GitNexus 客户端（必需）
         quick: 是否快速模式
 
     Returns:
         审查结果
     """
-    supervisor = ReviewSupervisor(quick_mode=quick)
+    supervisor = ReviewSupervisor(gitnexus_client=gitnexus_client, quick_mode=quick)
     return await supervisor.review(file_path, code)
 
 
 async def review_files(
     files: list[tuple[Path, str]],
+    gitnexus_client: GitNexusClient,
     quick: bool = False,
 ) -> list[ReviewResult]:
     """便捷函数：批量审查文件.
 
     Args:
         files: (文件路径, 代码内容) 列表
+        gitnexus_client: GitNexus 客户端（必需）
         quick: 是否快速模式
 
     Returns:
         审查结果列表
     """
-    supervisor = ReviewSupervisor(quick_mode=quick)
+    supervisor = ReviewSupervisor(gitnexus_client=gitnexus_client, quick_mode=quick)
     return await supervisor.review_batch(files)

@@ -173,9 +173,9 @@ class MarkdownTemplates:
     # 报告头部
     HEADER = """# 🔍 GitConsistency Code Health Report
 
-> **Project**: {project_name}  
-> **Scan Date**: {scan_date}  
-> **Duration**: {duration:.2f}s  
+> **Project**: {project_name}
+> **Scan Date**: {scan_date}
+> **Duration**: {duration:.2f}s
 > **Commit**: `{commit_sha}`
 
 ---
@@ -202,8 +202,8 @@ class MarkdownTemplates:
     # 扫描器结果
     SCANNER_SECTION = """## 🔬 {scanner_name}
 
-**Status**: {status}  
-**Files Scanned**: {scanned_files}  
+**Status**: {status}
+**Files Scanned**: {scanned_files}
 **Issues Found**: {issue_count}
 
 {errors_block}
@@ -233,8 +233,8 @@ class MarkdownTemplates:
     # 详细发现
     FINDING_DETAIL = """### {severity} {rule_id}
 
-**File**: `{file_path}`  
-**Line**: {line}  
+**File**: `{file_path}`
+**Line**: {line}
 **Confidence**: {confidence:.0%}
 
 {message}

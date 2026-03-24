@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from consistency.config import get_settings
+from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
 from consistency.llm import LLMConfig, LLMProviderFactory
 from consistency.llm.base import BaseLLMProvider
 from consistency.reviewer.context_enhancer import ContextEnhancer
@@ -65,6 +66,7 @@ class AIReviewer:
         cache_ttl: int = 3600,
         force_json: bool = True,
         provider_type: str = "litellm",
+        gitnexus_client: GitNexusClient | None = None,
     ) -> None:
         """初始化 AI 审查器.
 
@@ -80,6 +82,7 @@ class AIReviewer:
             cache_ttl: 缓存过期时间（秒）
             force_json: 是否强制 JSON 输出（使用 response_format，需要模型支持）
             provider_type: LLM Provider 类型（默认 litellm）
+            gitnexus_client: GitNexus 客户端（可选，如果不提供则尝试自动获取）
         """
         # 从配置读取默认值
         settings = get_settings()
@@ -93,6 +96,7 @@ class AIReviewer:
         self.api_base = api_base
         self.force_json = force_json
         self.provider_type = provider_type
+        self.gitnexus = gitnexus_client or get_gitnexus_client()
 
         # 初始化 LLM Provider
         self._provider: BaseLLMProvider | None = None
@@ -187,16 +191,20 @@ class AIReviewer:
                 return cached
 
         # 获取 GitNexus 上下文增强
-        context_enhancer = ContextEnhancer()
-        try:
-            primary_file = Path(context.files_changed[0]) if context.files_changed else Path(".")
-            gitnexus_context = await context_enhancer.enhance(
-                file_path=primary_file,
-                code=context.diff or "",
-            )
-        except Exception as e:
-            logger.debug(f"GitNexus 上下文获取失败: {e}")
-            gitnexus_context = ""
+        gitnexus_context = ""
+        if self.gitnexus.is_available():
+            context_enhancer = ContextEnhancer(self.gitnexus)
+            try:
+                primary_file = Path(context.files_changed[0]) if context.files_changed else Path(".")
+                gitnexus_context = await context_enhancer.enhance(
+                    file_path=primary_file,
+                    code=context.diff or "",
+                )
+            except Exception as e:
+                logger.debug(f"GitNexus 上下文获取失败: {e}")
+                gitnexus_context = ""
+        else:
+            logger.debug("GitNexus 不可用，跳过上下文增强")
 
         # 构建 Prompt
         messages = self._build_messages(context, review_type)

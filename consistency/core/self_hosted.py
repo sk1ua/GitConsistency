@@ -143,6 +143,7 @@ def detect_runner_capabilities() -> dict[str, Any]:
             capture_output=True,
             text=True,
             timeout=5,
+            check=False,
         )
         if result.returncode == 0:
             capabilities["gpu"] = result.stdout.strip()

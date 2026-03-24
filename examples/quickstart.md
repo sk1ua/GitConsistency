@@ -39,15 +39,15 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      
+
       - name: Install GitConsistency
         run: pip install "git-consistency[full]"
-      
+
       - name: Run Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -106,9 +106,9 @@ CONSISTENCY_LOG_LEVEL=INFO
 ```markdown
 # 🔍 GitConsistency Code Health Report
 
-> **Project**: my-project  
-> **Scan Date**: 2024-01-15 10:30:00  
-> **Duration**: 5.23s  
+> **Project**: my-project
+> **Scan Date**: 2024-01-15 10:30:00
+> **Duration**: 5.23s
 
 ---
 

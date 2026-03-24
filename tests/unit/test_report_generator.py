@@ -243,10 +243,7 @@ class TestGenerateGitHubComment:
         generator = ReportGenerator()
 
         # 创建很多发现
-        findings = [
-            Finding(rule_id=f"R{i}", message=f"Issue {i}" * 1000, severity=Severity.HIGH)
-            for i in range(100)
-        ]
+        findings = [Finding(rule_id=f"R{i}", message=f"Issue {i}" * 1000, severity=Severity.HIGH) for i in range(100)]
         result = ScanResult(scanner_name="security", findings=findings)
 
         comment = generator.generate_github_comment([result], max_length=5000)

@@ -4,9 +4,11 @@
 """
 
 from consistency.report.generator import ReportGenerator
+from consistency.report.llm_generator import LLMReportGenerator
 from consistency.report.templates import ReportFormat, ReportTheme
 
 __all__ = [
+    "LLMReportGenerator",
     "ReportFormat",
     "ReportGenerator",
     "ReportTheme",

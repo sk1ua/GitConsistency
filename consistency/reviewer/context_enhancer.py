@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
 
-from consistency.core.gitnexus_client import GitNexusClient, get_gitnexus_client
+from consistency.core.gitnexus_client import GitNexusClient
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,12 @@ class SymbolContext(TypedDict):
     callees: list[ContextNode]
 
 
+class ContextEnhancerError(Exception):
+    """上下文增强器错误."""
+
+    pass
+
+
 class ContextEnhancer:
     """上下文增强器.
 
@@ -54,13 +60,27 @@ class ContextEnhancer:
         >>> print(context)
     """
 
-    def __init__(self, gitnexus_client: GitNexusClient | None = None) -> None:
+    def __init__(self, gitnexus_client: GitNexusClient) -> None:
         """初始化增强器.
 
         Args:
-            gitnexus_client: GitNexus 客户端
+            gitnexus_client: GitNexus 客户端（必需）
+
+        Raises:
+            ValueError: 如果 gitnexus_client 为 None 或不可用
         """
-        self.gitnexus = gitnexus_client or get_gitnexus_client()
+        if gitnexus_client is None:
+            raise ValueError(
+                "GitNexus 客户端是必需的。请提供有效的 GitNexusClient 实例。\n"
+                "使用指南: npm install -g gitnexus && export CONSISTENCY_GITNEXUS_ENABLED=true"
+            )
+        if not gitnexus_client.is_available():
+            raise ValueError(
+                "GitNexus 客户端不可用。请确保:\n"
+                "1. 已安装 GitNexus: npm install -g gitnexus\n"
+                "2. 已设置环境变量: export CONSISTENCY_GITNEXUS_ENABLED=true"
+            )
+        self.gitnexus = gitnexus_client
 
     async def enhance(
         self,
@@ -77,11 +97,17 @@ class ContextEnhancer:
 
         Returns:
             增强后的上下文描述
+
+        Raises:
+            ContextEnhancerError: 如果 GitNexus 不可用或分析失败
         """
-        # 检查 GitNexus 是否可用
+        # GitNexus 现在是必需的
         if not self.gitnexus.is_available():
-            logger.debug("GitNexus 不可用，跳过上下文增强")
-            return ""
+            raise ContextEnhancerError(
+                "GitNexus 不可用但它是必需的组件。\n"
+                "请确保 GitNexus 已安装并运行: npm install -g gitnexus\n"
+                "然后设置环境变量: export CONSISTENCY_GITNEXUS_ENABLED=true"
+            )
 
         # 提取符号
         symbols = self._extract_symbols(code)
@@ -93,8 +119,7 @@ class ContextEnhancer:
             try:
                 await self.gitnexus.ensure_analyzed(repo_path)
             except Exception as e:
-                logger.warning(f"GitNexus 分析失败: {e}")
-                return ""
+                raise ContextEnhancerError(f"GitNexus 分析失败: {e}") from e
 
         # 获取每个符号的上下文
         contexts = []
@@ -242,6 +267,7 @@ class ContextEnhancer:
 async def enhance_code_context(
     file_path: Path | str,
     code: str,
+    gitnexus_client: GitNexusClient,
     repo_path: Path | str | None = None,
 ) -> str:
     """便捷函数：增强代码上下文.
@@ -249,10 +275,11 @@ async def enhance_code_context(
     Args:
         file_path: 代码文件路径
         code: 代码内容
+        gitnexus_client: GitNexus 客户端（必需）
         repo_path: 代码库根路径
 
     Returns:
         增强后的上下文描述
     """
-    enhancer = ContextEnhancer()
+    enhancer = ContextEnhancer(gitnexus_client)
     return await enhancer.enhance(file_path, code, repo_path)
