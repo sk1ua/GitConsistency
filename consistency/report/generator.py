@@ -212,20 +212,17 @@ class ReportGenerator:
             lines.append(MarkdownTemplates.AGENT_SECTION_HEADER)
             agent_idx = 1
             for review in agent_reviews:
+                # 从 metadata 获取 agent 名称
+                agent_name = review.metadata.get("agent_name", "AI")
                 for comment in review.comments:
                     severity_icon = self._get_severity_icon(comment.severity.value)
                     open_attr = " open" if comment.severity.value in ("HIGH", "CRITICAL") else ""
                     snippet = ""
-                    if comment.code_snippet:
-                        snippet = MarkdownTemplates.CODE_SNIPPET.format(
-                            language="python",  # 简化处理
-                            code=comment.code_snippet[:200],
-                        )
                     lines.append(
                         MarkdownTemplates.AGENT_FINDING.format(
                             open_attr=open_attr,
                             severity_icon=severity_icon,
-                            agent_name=review.agent_name or "Agent",
+                            agent_name=agent_name,
                             index=agent_idx,
                             title=self._escape_html(comment.category.value),
                             category=comment.category.value,
@@ -256,13 +253,13 @@ class ReportGenerator:
             )
         )
 
-        comment = "\n".join(lines)
+        comment_text = "\n".join(lines)
 
         # 截断如果超过限制
-        if len(comment) > max_length:
-            comment = comment[: max_length - 100] + "\n\n... (内容已截断)"
+        if len(comment_text) > max_length:
+            comment_text = comment_text[: max_length - 100] + "\n\n... (内容已截断)"
 
-        return comment
+        return comment_text
 
     def _format_evidence(self, finding: Finding) -> str:
         """格式化证据/定位信息."""
