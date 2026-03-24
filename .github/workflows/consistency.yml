@@ -99,6 +99,8 @@ jobs:
       - name: Install GitConsistency
         run: |
           uv venv
+          # 先安装 setuptools，避免 semgrep 的 pkg_resources 错误
+          uv pip install setuptools --python .venv/bin/python
           uv pip install -e ".[full]" --python .venv/bin/python
 
       # -----------------------------------------------------------------------
@@ -211,6 +213,7 @@ jobs:
       - name: Install dev dependencies
         run: |
           uv venv
+          uv pip install setuptools --python .venv/bin/python
           uv pip install -e ".[dev,full]" --python .venv/bin/python --no-cache
 
       - name: Ruff check
@@ -253,6 +256,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv
+          uv pip install setuptools --python .venv/bin/python
           uv pip install -e ".[dev,full]" --python .venv/bin/python --no-cache
 
       - name: Run tests with coverage
