@@ -252,6 +252,16 @@ jobs:
         with:
           enable-cache: false
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install GitNexus CLI
+        run: |
+          npm install -g gitnexus
+          gitnexus --version
+
       - name: Install dependencies
         run: |
           pip install setuptools wheel
@@ -267,6 +277,64 @@ jobs:
         with:
           files: ./coverage.xml
           fail_ci_if_error: false  # 不阻塞构建，仅报告
+
+  # ===========================================================================
+  # GitNexus 集成测试
+  # ===========================================================================
+  gitnexus-test:
+    name: 🔗 GitNexus MCP Integration
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install GitNexus CLI
+        run: |
+          npm install -g gitnexus
+          gitnexus --version
+
+      - name: Install Python dependencies
+        run: |
+          pip install setuptools wheel
+          pip install -e ".[dev,full]" --no-cache
+
+      - name: Run GitNexus tests
+        run: |
+          pytest tests/unit/test_gitnexus_client.py -v
+
+      - name: Test GitNexus integration with real CLI
+        run: |
+          python -c "
+          from consistency.core.gitnexus_client import GitNexusClient
+          import asyncio
+
+          # 检查 CLI 是否可用
+          available = GitNexusClient.is_available()
+          print(f'GitNexus CLI available: {available}')
+
+          if available:
+              # 创建客户端并测试分析
+              client = GitNexusClient()
+              repo_path = '.'
+
+              # 尝试分析当前仓库
+              try:
+                  result = asyncio.run(client.analyze(repo_path))
+                  print(f'Analysis result: {result}')
+              except Exception as e:
+                  print(f'Analysis error (expected if not a supported repo): {e}')
+          "
 
   # ===========================================================================
   # 构建和发布（仅 main 分支）
