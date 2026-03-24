@@ -136,7 +136,7 @@ class ReportGenerator:
             lines.append("")
 
             # 显示高严重级别的问题
-            high_issues = []
+            high_issues: list[tuple[ReviewResult, Any]] = []
             for r in agent_reviews:
                 for c in r.comments:
                     if c.severity.value in ("HIGH", "CRITICAL"):

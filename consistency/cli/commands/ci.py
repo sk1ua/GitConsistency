@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from rich.console import Console
 
     from consistency.config import Settings
+    from consistency.reviewer.models import ReviewResult
 
 
 def register_ci_command(app: typer.Typer, console: Console) -> None:
@@ -171,7 +172,7 @@ async def _run_analysis(
         if files_to_review:
             console.print(f"[blue]🔍 Agent 正在审查 {len(files_to_review)} 个文件...[/blue]")
 
-            agent_results = []
+            agent_results: list[ReviewResult] = []
             for file_path_str in files_to_review[:10]:  # 最多审查 10 个文件
                 file_path = Path(file_path_str)
                 if file_path.exists():
