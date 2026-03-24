@@ -214,7 +214,7 @@ class ReportGenerator:
             for review in agent_reviews:
                 for comment in review.comments:
                     severity_icon = self._get_severity_icon(comment.severity.value)
-                    open_attr = ' open' if comment.severity.value in ("HIGH", "CRITICAL") else ''
+                    open_attr = " open" if comment.severity.value in ("HIGH", "CRITICAL") else ""
                     snippet = ""
                     if comment.code_snippet:
                         snippet = MarkdownTemplates.CODE_SNIPPET.format(
