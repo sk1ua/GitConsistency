@@ -31,9 +31,7 @@ class LiteLLMProvider(BaseLLMProvider):
         try:
             import litellm  # noqa: F401
         except ImportError as e:
-            raise ImportError(
-                "LiteLLM 未安装，请运行: pip install litellm"
-            ) from e
+            raise ImportError("LiteLLM 未安装，请运行: pip install litellm") from e
 
     @property
     def name(self) -> str:

@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import logging
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel

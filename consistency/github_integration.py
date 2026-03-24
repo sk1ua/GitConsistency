@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 # 重新导出所有组件以保持向后兼容
 from consistency.github import (  # noqa: F401
     CommentManager,
@@ -22,8 +24,6 @@ from consistency.github import (  # noqa: F401
     is_github_actions,
     parse_pr_url,
 )
-
-import warnings
 
 warnings.warn(
     "consistency.github_integration 已弃用，请使用 consistency.github",

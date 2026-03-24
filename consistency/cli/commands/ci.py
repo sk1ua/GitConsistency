@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from consistency.config import Settings
 
 
-def register_ci_command(app: "typer.Typer", console: "Console") -> None:
+def register_ci_command(app: typer.Typer, console: Console) -> None:
     """注册 ci 命令到主 CLI."""
 
     @app.command(name="ci")
@@ -42,7 +42,7 @@ def _run_ci_command(
     pr_number: int | None,
     dry_run: bool,
     skip_ai: bool,
-    console: "Console",
+    console: Console,
 ) -> None:
     """执行 CI 命令的核心逻辑."""
     from consistency import get_settings
@@ -122,7 +122,7 @@ async def _run_analysis(
     path: Path,
     skip_security: bool,
     skip_ai: bool,
-    settings: "Settings",
+    settings: Settings,
 ) -> dict:
     """运行分析."""
     orchestrator = ScannerOrchestrator(settings)
@@ -156,7 +156,7 @@ async def _run_analysis(
     }
 
 
-def _print_summary(result: dict, console: "Console") -> None:
+def _print_summary(result: dict, console: Console) -> None:
     """打印分析摘要."""
     from rich.table import Table
 

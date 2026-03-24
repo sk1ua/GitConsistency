@@ -23,7 +23,8 @@ from consistency.scanners.orchestrator import ScannerOrchestrator
 if TYPE_CHECKING:
     import typer
 
-def register_analyze_command(app: "typer.Typer", console: Console) -> None:
+
+def register_analyze_command(app: typer.Typer, console: Console) -> None:
     """注册 analyze 命令到主 CLI."""
 
     @app.command(name="analyze")

@@ -173,10 +173,7 @@ class AnalyzeCommand:
         context = ReviewContext(
             diff="",
             files_changed=[str(f.file_path) for f in all_findings if f.file_path],
-            security_findings=[
-                {"severity": f.severity.value, "message": f.message}
-                for f in all_findings[:20]
-            ],
+            security_findings=[{"severity": f.severity.value, "message": f.message} for f in all_findings[:20]],
         )
 
         return await reviewer.review(context)
@@ -260,9 +257,7 @@ class AnalyzeCommand:
 
         if not all_findings:
             if scan_errors:
-                console.print(
-                    "\n[yellow]⚠ 当前未发现问题，但扫描器存在错误，请先修复环境后重跑。[/yellow]"
-                )
+                console.print("\n[yellow]⚠ 当前未发现问题，但扫描器存在错误，请先修复环境后重跑。[/yellow]")
             else:
                 console.print("\n[green]🎉 未发现安全问题！[/green]")
             return

@@ -119,9 +119,7 @@ class CommentManager:
                 logger.error(f"发布评论失败: {error_msg}")
                 self._handle_error(error_msg, repo, pr_number, e)
 
-    def _handle_error(
-        self, error_msg: str, repo: str, pr_number: int, original: Exception
-    ) -> None:
+    def _handle_error(self, error_msg: str, repo: str, pr_number: int, original: Exception) -> None:
         """分类处理错误."""
         if "401" in error_msg or "Bad credentials" in error_msg:
             raise GitHubAuthError(
@@ -218,9 +216,7 @@ class CommentManager:
         async def post_single(comment: PRComment) -> dict[str, Any]:
             async with semaphore:
                 if comment.path and comment.line:
-                    return await self.post_file_comment(
-                        repo, pr_number, comment.path, comment.line, comment.body
-                    )
+                    return await self.post_file_comment(repo, pr_number, comment.path, comment.line, comment.body)
                 else:
                     return await self.post_comment(repo, pr_number, comment.body)
 

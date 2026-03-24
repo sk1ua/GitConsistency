@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from rich.console import Console
 
 
-def register_init_command(app: "typer.Typer", console: "Console") -> None:
+def register_init_command(app: typer.Typer, console: Console) -> None:
     """注册 init 命令到主 CLI."""
 
     @app.command(name="init")

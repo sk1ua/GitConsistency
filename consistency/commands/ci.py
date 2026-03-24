@@ -16,12 +16,11 @@ from typing import Any
 from rich.console import Console
 from rich.panel import Panel
 
+from consistency.commands.analyze import AnalyzeCommand
 from consistency.config import Settings, get_settings
 from consistency.exceptions import GitConsistencyError, GitHubError
 from consistency.github import GitHubIntegration
 from consistency.report.generator import ReportGenerator
-
-from consistency.commands.analyze import AnalyzeCommand
 
 console = Console()
 
@@ -127,9 +126,7 @@ class CICommand:
                 "success": True,
                 "repo": repo,
                 "pr_number": actual_pr_number,
-                "findings_count": sum(
-                    len(r.findings) for r in result["results"].values()
-                ),
+                "findings_count": sum(len(r.findings) for r in result["results"].values()),
             }
 
         except GitConsistencyError as e:
@@ -186,9 +183,7 @@ class CICommand:
 
         if not all_findings:
             if scan_errors:
-                console.print(
-                    "\n[yellow]⚠ 当前未发现问题，但扫描器存在错误。[/yellow]"
-                )
+                console.print("\n[yellow]⚠ 当前未发现问题，但扫描器存在错误。[/yellow]")
             else:
                 console.print("\n[green]🎉 未发现安全问题！[/green]")
             return

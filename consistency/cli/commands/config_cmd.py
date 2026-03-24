@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from rich.console import Console
 
 
-def register_config_commands(config_app: "typer.Typer", console: "Console") -> None:
+def register_config_commands(config_app: typer.Typer, console: Console) -> None:
     """注册 config 子命令."""
 
     @config_app.command(name="show")

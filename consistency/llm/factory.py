@@ -69,10 +69,7 @@ class LLMProviderFactory:
 
         provider_class = cls._providers.get(name)
         if not provider_class:
-            raise ValueError(
-                f"未知的 LLM Provider: {name}. "
-                f"可用选项: {', '.join(cls._providers.keys())}"
-            )
+            raise ValueError(f"未知的 LLM Provider: {name}. 可用选项: {', '.join(cls._providers.keys())}")
 
         return provider_class(config)
 

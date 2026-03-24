@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from consistency.github.checks import CheckManager, PRInfo
 from consistency.github.client import GitHubClient
 from consistency.github.comments import CommentManager, PRComment
-from consistency.github.checks import CheckManager, PRInfo
 from consistency.github.labels import LabelManager
 from consistency.github.utils import detect_from_env, is_github_actions, parse_pr_url
 
@@ -91,9 +91,7 @@ class GitHubIntegration:
         commit_id: str | None = None,
     ) -> dict[str, Any]:
         """发布文件行级评论."""
-        return await self.comments.post_file_comment(
-            repo, pr_number, path, line, body, commit_id
-        )
+        return await self.comments.post_file_comment(repo, pr_number, path, line, body, commit_id)
 
     async def post_comments_batch(
         self,
@@ -103,9 +101,7 @@ class GitHubIntegration:
         max_concurrent: int = 3,
     ) -> list[dict[str, Any]]:
         """批量发布评论."""
-        return await self.comments.post_comments_batch(
-            repo, pr_number, comments, max_concurrent
-        )
+        return await self.comments.post_comments_batch(repo, pr_number, comments, max_concurrent)
 
     async def create_check_run(
         self,
@@ -117,9 +113,7 @@ class GitHubIntegration:
         output: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """创建 Check Run."""
-        return await self.checks.create_check_run(
-            repo, name, head_sha, status, conclusion, output
-        )
+        return await self.checks.create_check_run(repo, name, head_sha, status, conclusion, output)
 
     async def update_pr_status(
         self,
@@ -153,10 +147,10 @@ class GitHubIntegration:
 
 # 导出子模块组件（供高级用户使用）
 __all__ = [
-    "GitHubIntegration",
-    "GitHubClient",
-    "CommentManager",
     "CheckManager",
+    "CommentManager",
+    "GitHubClient",
+    "GitHubIntegration",
     "LabelManager",
     "PRComment",
     "PRInfo",

@@ -78,8 +78,5 @@ class ConfigCommand:
 
         return {
             "success": True,
-            "checks": {
-                name: {"configured": ok, "description": desc}
-                for name, ok, desc in checks
-            },
+            "checks": {name: {"configured": ok, "description": desc} for name, ok, desc in checks},
         }

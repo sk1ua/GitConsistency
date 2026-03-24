@@ -68,9 +68,7 @@ class ScanCommand:
                 console.print(f"  [red]- {err}[/red]")
 
         for finding in result.findings:
-            console.print(
-                f"  [{finding.severity.value}] {finding.rule_id}: {finding.message[:80]}"
-            )
+            console.print(f"  [{finding.severity.value}] {finding.rule_id}: {finding.message[:80]}")
 
         return {
             "success": len(result.errors) == 0,

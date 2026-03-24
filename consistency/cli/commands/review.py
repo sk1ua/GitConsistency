@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from rich.console import Console
 
 
-def register_review_commands(review_app: "typer.Typer", console: "Console") -> None:
+def register_review_commands(review_app: typer.Typer, console: Console) -> None:
     """注册 review 子命令."""
 
     @review_app.command(name="file")

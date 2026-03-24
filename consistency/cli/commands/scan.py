@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from rich.console import Console
 
 
-def register_scan_commands(scan_app: "typer.Typer", console: "Console") -> None:
+def register_scan_commands(scan_app: typer.Typer, console: Console) -> None:
     """注册 scan 子命令."""
 
     @scan_app.command(name="security")
