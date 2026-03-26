@@ -314,8 +314,9 @@ REVIEW_CHECKLIST = """## 审查检查清单（自检用）
 # 4. 完整的用户级 Prompt 模板
 # =============================================================================
 
+
 def build_strict_review_prompt(
-    findings_data: dict,
+    findings_data: dict[str, object],
     project_name: str,
     commit_sha: str,
     duration: float,
@@ -342,30 +343,34 @@ def build_strict_review_prompt(
     ]
 
     if extra_context:
-        prompt_parts.extend([
-            "### 额外上下文",
-            extra_context,
-            "",
-        ])
+        prompt_parts.extend(
+            [
+                "### 额外上下文",
+                extra_context,
+                "",
+            ]
+        )
 
-    prompt_parts.extend([
-        REVIEW_CHECKLIST,
-        "",
-        LAYERED_DIAGNOSIS_FORMAT,
-        "",
-        "---",
-        "",
-        "## 最终要求",
-        "",
-        "请严格按上述格式规范输出报告，注意：",
-        "1. 先输出顶部概览栏",
-        "2. 按 🔴🟠🟢 分组输出问题详情",
-        "3. 使用 `<details>` 标签实现可折叠",
-        "4. 每个严重/中等问题必须包含：文件路径、代码片段、风险分析、修复方案",
-        "5. 使用中文输出",
-        "",
-        "直接输出 Markdown 内容，不要添加额外说明。",
-    ])
+    prompt_parts.extend(
+        [
+            REVIEW_CHECKLIST,
+            "",
+            LAYERED_DIAGNOSIS_FORMAT,
+            "",
+            "---",
+            "",
+            "## 最终要求",
+            "",
+            "请严格按上述格式规范输出报告，注意：",
+            "1. 先输出顶部概览栏",
+            "2. 按 🔴🟠🟢 分组输出问题详情",
+            "3. 使用 `<details>` 标签实现可折叠",
+            "4. 每个严重/中等问题必须包含：文件路径、代码片段、风险分析、修复方案",
+            "5. 使用中文输出",
+            "",
+            "直接输出 Markdown 内容，不要添加额外说明。",
+        ]
+    )
 
     return "\n".join(prompt_parts)
 
