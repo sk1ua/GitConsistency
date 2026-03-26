@@ -1,8 +1,12 @@
-"""风格审查 Agent."""
+"""风格审查 Agent (LLM 驱动).
+
+检查代码风格、命名规范、PEP8 等问题，使用 LLM 进行智能分析。
+"""
 
 from __future__ import annotations
 
 import ast
+import json
 import logging
 import re
 import time
@@ -12,6 +16,7 @@ from typing import Any
 from consistency.agents.base import AgentResult, BaseAgent
 from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import CommentCategory, ReviewComment, Severity
+from consistency.reviewer.prompts import PromptTemplate, ReviewContext, ReviewType
 
 logger = logging.getLogger(__name__)
 
@@ -19,21 +24,40 @@ logger = logging.getLogger(__name__)
 class StyleAgent(BaseAgent):
     """风格审查 Agent.
 
-    检查代码风格、命名规范、PEP8 等问题.
+    使用 LLM 检查代码风格、命名规范、PEP8 等问题。
 
     Examples:
-        >>> agent = StyleAgent(gitnexus_client)
+        >>> agent = StyleAgent()
         >>> result = await agent.analyze(Path("main.py"), code)
     """
 
-    def __init__(self, gitnexus_client: GitNexusClient) -> None:
+    def __init__(
+        self,
+        gitnexus_client: GitNexusClient | None = None,
+        llm_provider: Any | None = None,
+        timeout: float = 30.0,
+    ) -> None:
         """初始化.
 
         Args:
-            gitnexus_client: GitNexus 客户端（必需）
+            gitnexus_client: GitNexus 客户端（可选）
+            llm_provider: LLM Provider（可选，默认使用 LiteLLM）
+            timeout: LLM 调用超时时间（秒）
         """
         super().__init__()
         self.gitnexus = gitnexus_client
+        self.timeout = timeout
+
+        # 初始化 LLM Provider
+        self._llm = llm_provider
+        if self._llm is None:
+            try:
+                from consistency.llm.factory import LLMProviderFactory
+
+                self._llm = LLMProviderFactory.create_from_settings()
+            except Exception as e:
+                logger.warning(f"LLM Provider 初始化失败: {e}")
+                self._llm = None
 
     @property
     def name(self) -> str:
@@ -43,6 +67,94 @@ class StyleAgent(BaseAgent):
     async def analyze(self, file_path: Path, code: str) -> AgentResult:
         """执行风格分析."""
         start_time = time.perf_counter()
+
+        # 1. 尝试使用 LLM 进行分析
+        if self._llm is not None:
+            try:
+                llm_result = await self._analyze_with_llm(file_path, code)
+                if llm_result:
+                    duration = (time.perf_counter() - start_time) * 1000
+                    return AgentResult(
+                        agent_name=self.name,
+                        summary=llm_result.get("summary", "LLM 风格分析完成"),
+                        severity=self._parse_severity(llm_result.get("severity", "low")),
+                        comments=llm_result.get("comments", []),
+                        action_items=llm_result.get("action_items", []),
+                        metadata={"source": "llm"},
+                        duration_ms=duration,
+                    )
+            except Exception as e:
+                logger.warning(f"LLM 风格分析失败，回退到静态分析: {e}")
+
+        # 2. LLM 失败或不可用，回退到静态分析
+        return await self._analyze_with_static(file_path, code, start_time)
+
+    async def _analyze_with_llm(
+        self,
+        file_path: Path,
+        code: str,
+    ) -> dict[str, Any] | None:
+        """使用 LLM 进行风格分析."""
+        context = ReviewContext(
+            diff=code,
+            files_changed=[str(file_path)],
+            language="python",
+        )
+
+        messages = PromptTemplate.build(context, ReviewType.CONSISTENCY)
+
+        import asyncio
+
+        try:
+            response = await asyncio.wait_for(
+                self._llm.complete_json(messages),
+                timeout=self.timeout,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM 调用超时 ({self.timeout}s)")
+            return None
+
+        try:
+            content = response.content if hasattr(response, "content") else str(response)
+            result = json.loads(content)
+
+            # 过滤出风格相关的问题
+            comments = []
+            for c in result.get("comments", []):
+                category = c.get("category", "style")
+                if category in ["style", "maintainability"]:
+                    comment = ReviewComment(
+                        file=str(file_path),
+                        line=c.get("line"),
+                        message=c.get("message", ""),
+                        suggestion=c.get("suggestion"),
+                        severity=self._parse_severity(c.get("severity", "low")),
+                        category=CommentCategory.STYLE,
+                        confidence=0.8,
+                    )
+                    comments.append(comment)
+
+            return {
+                "summary": result.get("summary", ""),
+                "severity": result.get("severity", "low"),
+                "comments": comments,
+                "action_items": result.get("action_items", []),
+            }
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"LLM 响应 JSON 解析失败: {e}")
+            return None
+        except Exception as e:
+            logger.warning(f"LLM 响应处理失败: {e}")
+            return None
+
+    async def _analyze_with_static(
+        self,
+        file_path: Path,
+        code: str,
+        start_time: float,
+    ) -> AgentResult:
+        """使用静态分析（降级方案）."""
         findings = []
 
         # 1. 命名规范检查
@@ -232,9 +344,6 @@ class StyleAgent(BaseAgent):
             if stripped.startswith("import ") or stripped.startswith("from "):
                 import_lines.append((i, stripped))
 
-        # 检查是否有未使用的导入（简化检查）
-        # 实际应该用更复杂的方法
-
         # 检查导入排序（标准库 > 第三方 > 本地）
         stdlib_modules = {"os", "sys", "json", "re", "time", "logging", "pathlib"}
 
@@ -256,6 +365,17 @@ class StyleAgent(BaseAgent):
             prev_is_stdlib = is_stdlib
 
         return findings
+
+    def _parse_severity(self, severity: str) -> Severity:
+        """解析严重程度字符串."""
+        severity_map = {
+            "critical": Severity.CRITICAL,
+            "high": Severity.HIGH,
+            "medium": Severity.MEDIUM,
+            "low": Severity.LOW,
+            "info": Severity.INFO,
+        }
+        return severity_map.get(severity.lower(), Severity.LOW)
 
     def _convert_to_comments(
         self,

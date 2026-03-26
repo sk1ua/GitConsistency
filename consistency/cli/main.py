@@ -5,7 +5,13 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from typing import Annotated
+
+# Windows 编码修复：确保 UTF-8 编码
+if sys.platform == "win32":
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 import typer
 from rich.console import Console

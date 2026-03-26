@@ -31,7 +31,7 @@ class ReviewSupervisor:
 
     def __init__(
         self,
-        gitnexus_client: GitNexusClient,
+        gitnexus_client: GitNexusClient | None = None,
         enable_security: bool = True,
         enable_logic: bool = True,
         enable_style: bool = True,
@@ -40,27 +40,12 @@ class ReviewSupervisor:
         """初始化 Supervisor.
 
         Args:
-            gitnexus_client: GitNexus 客户端（必需）
+            gitnexus_client: GitNexus 客户端（可选，为 None 时使用基础模式）
             enable_security: 启用安全审查
             enable_logic: 启用逻辑审查
             enable_style: 启用风格审查
             quick_mode: 快速模式（仅安全审查）
-
-        Raises:
-            ValueError: 如果 gitnexus_client 为 None 或不可用
         """
-        if gitnexus_client is None:
-            raise ValueError(
-                "GitNexus 客户端是必需的。请提供有效的 GitNexusClient 实例。\n"
-                "使用指南: npm install -g gitnexus && export CONSISTENCY_GITNEXUS_ENABLED=true"
-            )
-        if not gitnexus_client.is_available():
-            raise ValueError(
-                "GitNexus 客户端不可用。请确保:\n"
-                "1. 已安装 GitNexus: npm install -g gitnexus\n"
-                "2. 已设置环境变量: export CONSISTENCY_GITNEXUS_ENABLED=true"
-            )
-
         self.gitnexus = gitnexus_client
         self.quick_mode = quick_mode
 
@@ -189,7 +174,7 @@ class ReviewSupervisor:
         return {
             "agents": list(self.agents.keys()),
             "quick_mode": self.quick_mode,
-            "gitnexus_available": self.gitnexus.is_available(),
+            "gitnexus_available": self.gitnexus.is_available() if self.gitnexus else False,
         }
 
 
@@ -197,7 +182,7 @@ class ReviewSupervisor:
 async def review_code(
     file_path: Path,
     code: str,
-    gitnexus_client: GitNexusClient,
+    gitnexus_client: GitNexusClient | None = None,
     quick: bool = False,
 ) -> ReviewResult:
     """便捷函数：审查代码.
@@ -205,7 +190,7 @@ async def review_code(
     Args:
         file_path: 文件路径
         code: 代码内容
-        gitnexus_client: GitNexus 客户端（必需）
+        gitnexus_client: GitNexus 客户端（可选）
         quick: 是否快速模式
 
     Returns:
@@ -217,14 +202,14 @@ async def review_code(
 
 async def review_files(
     files: list[tuple[Path, str]],
-    gitnexus_client: GitNexusClient,
+    gitnexus_client: GitNexusClient | None = None,
     quick: bool = False,
 ) -> list[ReviewResult]:
     """便捷函数：批量审查文件.
 
     Args:
         files: (文件路径, 代码内容) 列表
-        gitnexus_client: GitNexus 客户端（必需）
+        gitnexus_client: GitNexus 客户端（可选）
         quick: 是否快速模式
 
     Returns:

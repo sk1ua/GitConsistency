@@ -1,6 +1,7 @@
 # 🔍 GitConsistency - 代码安全扫描与 AI 审查
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-508%20passing-brightgreen.svg)]()
 [![uv](https://img.shields.io/badge/uv-包管理-purple.svg)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -15,6 +16,17 @@
 - 🤖 **AI 代码审查** - LiteLLM 驱动，支持 DeepSeek/Claude/Grok 等任意模型
 - 🔗 **GitNexus MCP 集成** - 代码图谱分析，提供上下文感知的审查
 - 💬 **GitHub PR 自动评论** - 智能评论，支持旧评论清理
+
+---
+
+## 📊 项目状态
+
+| 指标 | 状态 |
+|------|------|
+| 单元测试 | 508 tests passing |
+| 集成测试 | 11/11 passing |
+| 代码质量 | Ruff + MyPy + Bandit |
+| 测试覆盖率 | >30% |
 
 ---
 
@@ -252,9 +264,16 @@ uv sync
 # 运行测试
 pytest -v
 
+# 运行特定测试
+pytest tests/unit/ -v
+pytest tests/integration/ -v
+
 # 代码检查
 ruff check .
 mypy consistency/
+
+# 安全扫描
+bandit -r consistency/
 ```
 
 详见 [CONTRIBUTING.md](CONTRIBUTING.md)

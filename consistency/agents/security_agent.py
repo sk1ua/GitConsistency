@@ -1,7 +1,11 @@
-"""安全审查 Agent."""
+"""安全审查 Agent (LLM 驱动).
+
+结合 LLM 智能分析、静态扫描 (Semgrep + Bandit) 和可选的 GitNexus 调用链分析进行安全审查.
+"""
 
 from __future__ import annotations
 
+import json
 import logging
 import tempfile
 import time
@@ -11,6 +15,7 @@ from typing import Any
 from consistency.agents.base import AgentResult, BaseAgent
 from consistency.core.gitnexus_client import GitNexusClient
 from consistency.reviewer.models import CommentCategory, ReviewComment, Severity
+from consistency.reviewer.prompts import PromptTemplate, ReviewContext, ReviewType
 from consistency.scanners.security_scanner import SecurityScanner
 
 logger = logging.getLogger(__name__)
@@ -19,33 +24,42 @@ logger = logging.getLogger(__name__)
 class SecurityAgent(BaseAgent):
     """安全审查 Agent.
 
-    结合 Semgrep、Bandit 和 GitNexus 调用链分析进行安全审查.
+    使用 LLM 进行智能安全分析，支持静态扫描降级。
 
     Examples:
-        >>> agent = SecurityAgent(gitnexus_client)
+        >>> agent = SecurityAgent()
         >>> result = await agent.analyze(Path("main.py"), code)
         >>> print(result.summary)
     """
 
     def __init__(
         self,
-        gitnexus_client: GitNexusClient,
+        gitnexus_client: GitNexusClient | None = None,
+        llm_provider: Any | None = None,
+        timeout: float = 30.0,
     ) -> None:
         """初始化.
 
         Args:
-            gitnexus_client: GitNexus 客户端（必需）
-
-        Raises:
-            ValueError: 如果 gitnexus_client 不可用
+            gitnexus_client: GitNexus 客户端（可选）
+            llm_provider: LLM Provider（可选，默认使用 LiteLLM）
+            timeout: LLM 调用超时时间（秒）
         """
         super().__init__()
-        self.scanner = SecurityScanner()
-        if gitnexus_client is None:
-            raise ValueError("SecurityAgent 需要 GitNexus 客户端")
-        if not gitnexus_client.is_available():
-            raise ValueError("GitNexus 客户端不可用")
         self.gitnexus = gitnexus_client
+        self.timeout = timeout
+        self.scanner = SecurityScanner()
+
+        # 初始化 LLM Provider
+        self._llm = llm_provider
+        if self._llm is None:
+            try:
+                from consistency.llm.factory import LLMProviderFactory
+
+                self._llm = LLMProviderFactory.create_from_settings()
+            except Exception as e:
+                logger.warning(f"LLM Provider 初始化失败: {e}")
+                self._llm = None
 
     @property
     def name(self) -> str:
@@ -63,6 +77,113 @@ class SecurityAgent(BaseAgent):
             审查结果
         """
         start_time = time.perf_counter()
+
+        # 1. 尝试使用 LLM 进行分析
+        if self._llm is not None:
+            try:
+                llm_result = await self._analyze_with_llm(file_path, code)
+                if llm_result:
+                    duration = (time.perf_counter() - start_time) * 1000
+                    return AgentResult(
+                        agent_name=self.name,
+                        summary=llm_result.get("summary", "LLM 安全分析完成"),
+                        severity=self._parse_severity(llm_result.get("severity", "low")),
+                        comments=llm_result.get("comments", []),
+                        action_items=llm_result.get("action_items", []),
+                        metadata={"source": "llm"},
+                        duration_ms=duration,
+                    )
+            except Exception as e:
+                logger.warning(f"LLM 分析失败，回退到静态扫描: {e}")
+
+        # 2. LLM 失败或不可用，回退到静态扫描
+        return await self._analyze_with_static_scan(file_path, code, start_time)
+
+    async def _analyze_with_llm(
+        self,
+        file_path: Path,
+        code: str,
+    ) -> dict[str, Any] | None:
+        """使用 LLM 进行安全分析.
+
+        Args:
+            file_path: 文件路径
+            code: 代码内容
+
+        Returns:
+            解析后的 LLM 响应，失败返回 None
+        """
+        # 构建审查上下文
+        context = ReviewContext(
+            diff=code,
+            files_changed=[str(file_path)],
+            language="python",
+        )
+
+        # 构建 Prompt
+        messages = PromptTemplate.build(context, ReviewType.SECURITY)
+
+        # 调用 LLM
+        import asyncio
+
+        try:
+            response = await asyncio.wait_for(
+                self._llm.complete_json(messages),
+                timeout=self.timeout,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM 调用超时 ({self.timeout}s)")
+            return None
+
+        # 解析响应
+        try:
+            content = response.content if hasattr(response, "content") else str(response)
+            result = json.loads(content)
+
+            # 转换为 ReviewComment
+            comments = []
+            for c in result.get("comments", []):
+                comment = ReviewComment(
+                    file=str(file_path),
+                    line=c.get("line"),
+                    message=c.get("message", ""),
+                    suggestion=c.get("suggestion"),
+                    severity=self._parse_severity(c.get("severity", "medium")),
+                    category=CommentCategory.SECURITY,
+                    confidence=0.85,
+                )
+                comments.append(comment)
+
+            return {
+                "summary": result.get("summary", ""),
+                "severity": result.get("severity", "low"),
+                "comments": comments,
+                "action_items": result.get("action_items", []),
+            }
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"LLM 响应 JSON 解析失败: {e}")
+            return None
+        except Exception as e:
+            logger.warning(f"LLM 响应处理失败: {e}")
+            return None
+
+    async def _analyze_with_static_scan(
+        self,
+        file_path: Path,
+        code: str,
+        start_time: float,
+    ) -> AgentResult:
+        """使用静态扫描进行安全分析（降级方案）.
+
+        Args:
+            file_path: 文件路径
+            code: 代码内容
+            start_time: 开始时间
+
+        Returns:
+            审查结果
+        """
         all_findings: list[dict[str, Any]] = []
         metadata: dict[str, Any] = {"sources": []}
 
@@ -91,13 +212,14 @@ class SecurityAgent(BaseAgent):
         except Exception as e:
             logger.warning(f"安全扫描失败: {e}")
 
-        # 2. GitNexus 增强（现在为必需）
-        try:
-            gitnexus_findings = await self._analyze_with_gitnexus(file_path, code)
-            all_findings.extend(gitnexus_findings)
-            metadata["sources"].append("gitnexus")
-        except Exception as e:
-            logger.warning(f"GitNexus 分析失败: {e}")
+        # 2. GitNexus 增强（可选）
+        if self.gitnexus is not None:
+            try:
+                gitnexus_findings = await self._analyze_with_gitnexus(file_path, code)
+                all_findings.extend(gitnexus_findings)
+                metadata["sources"].append("gitnexus")
+            except Exception as e:
+                logger.debug(f"GitNexus 分析失败: {e}")
 
         # 3. 转换为 comments
         comments = self._convert_to_comments(all_findings)
@@ -131,6 +253,9 @@ class SecurityAgent(BaseAgent):
         """
         findings = []
 
+        if self.gitnexus is None:
+            return findings
+
         # 危险函数列表
         dangerous_functions = [
             "eval",
@@ -162,6 +287,17 @@ class SecurityAgent(BaseAgent):
                     logger.debug(f"GitNexus 上下文获取失败 {func}: {e}")
 
         return findings
+
+    def _parse_severity(self, severity: str) -> Severity:
+        """解析严重程度字符串."""
+        severity_map = {
+            "critical": Severity.CRITICAL,
+            "high": Severity.HIGH,
+            "medium": Severity.MEDIUM,
+            "low": Severity.LOW,
+            "info": Severity.INFO,
+        }
+        return severity_map.get(severity.lower(), Severity.MEDIUM)
 
     def _convert_to_comments(self, findings: list[dict[str, Any]]) -> list[ReviewComment]:
         """将发现转换为 ReviewComment."""
