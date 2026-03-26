@@ -29,86 +29,13 @@ class LLMReportGenerator:
     # 最大重试次数
     MAX_RETRIES = 3
 
-    def __init__(self) -> None:
-        """初始化 LLM 报告生成器."""
-        self.llm = LLMProviderFactory.create_from_settings()
-
-    @retry(
-        stop=stop_after_attempt(MAX_RETRIES),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type((asyncio.TimeoutError, ConnectionError)),
-        reraise=True,
-    )
-    async def _call_llm(self, prompt: str) -> str:
-        """调用 LLM 生成内容.
-
-        Args:
-            prompt: 提示词内容
-
-        Returns:
-            LLM 生成的文本
-
-        Raises:
-            asyncio.TimeoutError: 当 LLM 调用超时
-            ConnectionError: 当连接失败且重试耗尽
-        """
-        messages = [
-            {"role": "system", "content": "你是一个专业的代码审查报告生成专家。"},
-            {"role": "user", "content": prompt},
-        ]
-        try:
-            # 使用 asyncio.wait_for 添加超时控制
-            response = await asyncio.wait_for(
-                self.llm.complete(messages=messages),
-                timeout=self.LLM_TIMEOUT_SECONDS,
-            )
-            return response.content.strip()
-        except asyncio.TimeoutError:
-            logger.warning(f"LLM 调用超时（{self.LLM_TIMEOUT_SECONDS}秒）")
-            raise
-        except Exception as e:
-            logger.error(f"LLM 调用失败: {e}")
-            raise
-
-    async def generate(
-        self,
-        scan_results: list[ScanResult],
-        project_name: str = "Unknown",
-        commit_sha: str = "unknown",
-        duration: float = 0.0,
-    ) -> str:
-        """生成 Markdown 报告.
-
-        Args:
-            scan_results: 扫描结果列表
-            project_name: 项目名称
-            commit_sha: 提交 SHA
-            duration: 扫描耗时
-
-        Returns:
-            Markdown 格式的报告
-        """
-        # 构建问题数据
-        findings_data = self._prepare_findings_data(scan_results)
-
-        prompt = f"""你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份"傻瓜级修复清单"报告。
-
-## 项目信息
-- 项目名称: {project_name}
-- 提交: {commit_sha[:8] if commit_sha else "unknown"}
-- 扫描耗时: {duration:.2f}s
-
-## 发现的问题数据
-```json
-{json.dumps(findings_data, ensure_ascii=False, indent=2)}
-```
-
-## 输出格式规范
+    # 报告格式规范模板（共享）
+    _REPORT_FORMAT_SPEC = """\n## 输出格式规范
 
 ### 顶部概览栏
 在最开头生成统计徽章，格式如下：
 ```
-🔴 严重问题 {{{{N}}}} 项    🟠 中等问题 {{{{N}}}} 项    🟢 轻微问题 {{{{N}}}} 项
+🔴 严重问题 {{N}} 项    🟠 中等问题 {{N}} 项    🟢 轻微问题 {{N}} 项
 
 🔴 严重 — [一句话说明此类风险的核心影响，如"会导致工具完全无法使用"]
 🟠 中等 — [一句话说明，如"让人困惑或浪费依赖空间"]
@@ -159,8 +86,110 @@ class LLMReportGenerator:
 3. **高亮规范**：所有文件路径、命令、代码片段必须用 `代码块` 包裹
 4. **行动导向**：每个严重问题必须提供可执行的修复命令或代码
 5. **严重程度映射**：CRITICAL/HIGH → 🔴 严重, MEDIUM → 🟠 中等, LOW/INFO → 🟢 轻微
+"""
 
-请直接输出 Markdown 内容，不要添加额外的说明文字。"""
+    def __init__(self) -> None:
+        """初始化 LLM 报告生成器."""
+        self.llm = LLMProviderFactory.create_from_settings()
+
+    @retry(
+        stop=stop_after_attempt(MAX_RETRIES),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((asyncio.TimeoutError, ConnectionError)),
+        reraise=True,
+    )
+    async def _call_llm(self, prompt: str) -> str:
+        """调用 LLM 生成内容.
+
+        Args:
+            prompt: 提示词内容
+
+        Returns:
+            LLM 生成的文本
+
+        Raises:
+            asyncio.TimeoutError: 当 LLM 调用超时
+            ConnectionError: 当连接失败且重试耗尽
+        """
+        messages = [
+            {"role": "system", "content": "你是一个专业的代码审查报告生成专家。"},
+            {"role": "user", "content": prompt},
+        ]
+        try:
+            # 使用 asyncio.wait_for 添加超时控制
+            response = await asyncio.wait_for(
+                self.llm.complete(messages=messages),
+                timeout=self.LLM_TIMEOUT_SECONDS,
+            )
+            return response.content.strip()
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM 调用超时（{self.LLM_TIMEOUT_SECONDS}秒）")
+            raise
+        except Exception as e:
+            logger.error(f"LLM 调用失败: {e}")
+            raise
+
+    def _build_base_prompt(
+        self,
+        findings_data: dict[str, Any],
+        project_name: str,
+        duration_info: str,
+        extra_instructions: str = "",
+    ) -> str:
+        """构建基础 prompt 模板.
+
+        Args:
+            findings_data: 问题数据
+            project_name: 项目名称
+            duration_info: 耗时信息字符串
+            extra_instructions: 额外指令
+
+        Returns:
+            完整的 prompt 字符串
+        """
+        prompt_parts = [
+            "你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份\"傻瓜级修复清单\"报告。",
+            "",
+            "## 项目信息",
+            f"- 项目名称: {project_name}",
+            duration_info,
+            "",
+            "## 发现的问题数据",
+            "```json",
+            json.dumps(findings_data, ensure_ascii=False, indent=2),
+            "```",
+            self._REPORT_FORMAT_SPEC,
+        ]
+
+        if extra_instructions:
+            prompt_parts.append(extra_instructions)
+
+        prompt_parts.append("\n请直接输出 Markdown 内容，不要添加额外的说明文字。")
+
+        return "\n".join(prompt_parts)
+
+    async def generate(
+        self,
+        scan_results: list[ScanResult],
+        project_name: str = "Unknown",
+        commit_sha: str = "unknown",
+        duration: float = 0.0,
+    ) -> str:
+        """生成 Markdown 报告.
+
+        Args:
+            scan_results: 扫描结果列表
+            project_name: 项目名称
+            commit_sha: 提交 SHA
+            duration: 扫描耗时
+
+        Returns:
+            Markdown 格式的报告
+        """
+        findings_data = self._prepare_findings_data(scan_results)
+        duration_info = f"- 提交: {commit_sha[:8] if commit_sha else 'unknown'}\n- 扫描耗时: {duration:.2f}s"
+
+        prompt = self._build_base_prompt(findings_data, project_name, duration_info)
 
         try:
             return await self._call_llm(prompt)
@@ -189,81 +218,10 @@ class LLMReportGenerator:
             评论内容
         """
         findings_data = self._prepare_findings_data(scan_results)
+        duration_info = f"- 提交: {commit_sha[:8] if commit_sha else 'HEAD'}\n- 扫描耗时: {duration:.2f}s"
+        extra_instructions = f"\n### 额外要求\n- 适合 GitHub PR 的格式\n- 确保整体长度不超过 {max_length} 字符"
 
-        prompt = (
-            """你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份
-适合 GitHub PR 的"傻瓜级修复清单"报告。
-
-## 项目信息
-- 项目名称: """
-            + f"{project_name}\n"
-            + f"- 提交: {commit_sha[:8] if commit_sha else 'HEAD'}\n"
-            + f"- 扫描耗时: {duration:.2f}s\n"
-            + """
-## 发现的问题数据
-```json
-"""
-            + json.dumps(findings_data, ensure_ascii=False, indent=2)
-            + """
-```
-
-## 输出格式规范
-
-### 顶部概览栏（必须放在最开头）
-```
-🔴 严重问题 {{{{N}}}} 项    🟠 中等问题 {{{{N}}}} 项    🟢 轻微问题 {{{{N}}}} 项
-
-🔴 严重 — [一句话说明此类风险的核心影响]
-🟠 中等 — [一句话说明]
-🟢 轻微 — [一句话说明]
-```
-
-### 问题详情格式
-使用 `<details>` 标签实现可折叠区块：
-
-**🔴 严重级（默认展开）**
-```html
-<details open>
-<summary><b>严重#N [问题标题]</b> — [副标题/现象描述]</summary>
-
-**影响：** [一句话说明后果]
-
-**证据/定位：**
-1. 路径：`具体/文件/路径.py:行号`
-2. [其他证据]
-
-**修复方案：**
-- [ ] 选项A（推荐）：[具体操作步骤]
-- [ ] 选项B：[替代方案]
-
-> ⚠️ 警告：[关键提醒]
-</details>
-```
-
-**🟠 中等级（默认折叠）**
-```html
-<details>
-<summary><b>中等#N [标题]</b> — [副标题]</summary>
-...（同上结构）...
-</details>
-```
-
-**🟢 轻微级（默认折叠）**
-```html
-<details>
-<summary><b>轻微#N [标题]</b> — [副标题]</summary>
-...（简化结构）...
-</details>
-```
-
-### 内容规范
-1. **编号规则**：同类问题连续编号（严重#1、严重#2...）
-2. **颜色绑定**：🔴=严重(CRITICAL/HIGH) 🟠=中等(MEDIUM) 🟢=轻微(LOW/INFO)
-3. **高亮规范**：所有文件路径、命令、代码片段必须用 `代码块` 包裹
-4. **行动导向**：每个严重问题必须提供可执行的修复方案（带 - [ ] checkbox）
-5. **长度限制**：确保整体长度不超过 """
-            + f"{max_length} 字符\n\n请直接输出 Markdown 内容。"
-        )
+        prompt = self._build_base_prompt(findings_data, project_name, duration_info, extra_instructions)
 
         try:
             comment = await self._call_llm(prompt)
@@ -291,85 +249,16 @@ class LLMReportGenerator:
             Markdown 摘要内容
         """
         findings_data = self._prepare_findings_data(scan_results)
-
-        prompt = (
-            """你是一位经验丰富的技术审计架构师。请对输入内容进行深度分析，输出一份
-适合 GitHub Actions 的"傻瓜级修复清单"报告。
-
-## 项目信息
-- 项目名称: """
-            + f"{project_name}\n"
-            + f"- 扫描耗时: {duration_ms:.0f}ms\n"
-            + """
-## 发现的问题数据
-```json
-"""
-            + json.dumps(findings_data, ensure_ascii=False, indent=2)
-            + """
-```
-
-## 输出格式规范
-
-### 顶部概览栏（必须放在最开头）
-```
-🔴 严重问题 {{{{N}}}} 项    🟠 中等问题 {{{{N}}}} 项    🟢 轻微问题 {{{{N}}}} 项
-
-🔴 严重 — [一句话说明此类风险的核心影响]
-🟠 中等 — [一句话说明]
-🟢 轻微 — [一句话说明]
-```
-
-### 问题详情格式
-使用 `<details>` 标签实现可折叠区块：
-
-**🔴 严重级（默认展开）**
-```html
-<details open>
-<summary><b>严重#N [问题标题]</b> — [副标题/现象描述]</summary>
-
-**影响：** [一句话说明后果]
-
-**证据/定位：**
-1. 路径：`具体/文件/路径.py:行号`
-2. [其他证据]
-
-**修复方案：**
-- [ ] 选项A（推荐）：[具体操作步骤]
-- [ ] 选项B：[替代方案]
-
-> ⚠️ 警告：[关键提醒]
-</details>
-```
-
-**🟠 中等级（默认折叠）**
-```html
-<details>
-<summary><b>中等#N [标题]</b> — [副标题]</summary>
-...（同上结构）...
-</details>
-```
-
-**🟢 轻微级（默认折叠）**
-```html
-<details>
-<summary><b>轻微#N [标题]</b> — [副标题]</summary>
-...（简化结构）...
-</details>
-```
-
-### 内容规范
-1. **编号规则**：同类问题连续编号（严重#1、严重#2...）
-2. **颜色绑定**：🔴=严重(CRITICAL/HIGH) 🟠=中等(MEDIUM) 🟢=轻微(LOW/INFO)
-3. **高亮规范**：所有文件路径、命令、代码片段必须用 `代码块` 包裹
-4. **行动导向**：每个严重问题必须提供可执行的修复方案（带 - [ ] checkbox）
-
-### 整体状态判断
+        duration_info = f"- 扫描耗时: {duration_ms:.0f}ms"
+        extra_instructions = """\n### 整体状态判断
 - 🔴 有严重问题：概览栏显示 Failed 状态
 - 🟠 有中等问题：概览栏显示 Warning 状态
 - 🟢 无问题：概览栏显示 Passed 状态
 
-请直接输出 Markdown 内容。"""
-        )
+### 额外要求
+- 适合 GitHub Actions 的格式"""
+
+        prompt = self._build_base_prompt(findings_data, project_name, duration_info, extra_instructions)
 
         try:
             return await self._call_llm(prompt)

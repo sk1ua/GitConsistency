@@ -18,6 +18,10 @@ from consistency.scanners.base import Finding, ScanResult, Severity
 
 logger = logging.getLogger(__name__)
 
+# 报告生成常量
+MAX_CHECKS_FINDINGS_DISPLAY = 30  # Checks API 输出中最多显示的发现数量
+MAX_MESSAGE_LENGTH_DISPLAY = 80  # 消息显示的最大长度
+
 
 class ReportGenerator:
     """LLM 驱动的报告生成器.
@@ -285,12 +289,13 @@ class ReportGenerator:
         if all_findings:
             summary_lines.append("### Findings")
             summary_lines.append("")
-            for finding in all_findings[:30]:  # Checks 输出限制为 30 个
+            for finding in all_findings[:MAX_CHECKS_FINDINGS_DISPLAY]:  # Checks 输出限制数量
                 emoji = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢", "INFO": "🔵"}.get(
                     finding.severity.value, "⚪"
                 )
                 location = f"`{finding.file_path}:{finding.line}`" if finding.file_path else ""
-                summary_lines.append(f"{emoji} **{finding.severity.value}** [{finding.rule_id}] {finding.message[:80]}")
+                message_display = finding.message[:MAX_MESSAGE_LENGTH_DISPLAY]
+                summary_lines.append(f"{emoji} **{finding.severity.value}** [{finding.rule_id}] {message_display}")
                 if location:
                     summary_lines.append(f"   Location: {location}")
 

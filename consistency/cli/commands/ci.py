@@ -22,6 +22,12 @@ if TYPE_CHECKING:
     from consistency.config import Settings
     from consistency.reviewer.models import ReviewResult
 
+# CI 配置常量
+MAX_FILES_FOR_AGENT_REVIEW = 10  # 最多审查的文件数量
+MAX_COMMENTS_IN_REVIEW = 20  # 审查结果中最多包含的评论数量
+MAX_ACTION_ITEMS = 5  # 最多行动项数量
+MAX_SECURITY_FINDINGS_IN_CONTEXT = 20  # 审查上下文中最安全问题数量
+
 
 def register_ci_command(app: typer.Typer, console: Console) -> None:
     """注册 ci 命令到主 CLI."""
@@ -229,7 +235,7 @@ async def _run_analysis(
                 console.print(f"[blue]🔍 Agent 正在审查 {len(files_to_review)} 个文件...[/blue]")
 
                 agent_results: list[ReviewResult] = []
-                for file_path_str in files_to_review[:10]:  # 最多审查 10 个文件
+                for file_path_str in files_to_review[:MAX_FILES_FOR_AGENT_REVIEW]:  # 最多审查指定数量的文件
                     file_path = Path(file_path_str)
                     if file_path.exists():
                         try:
@@ -268,12 +274,12 @@ async def _run_analysis(
                     ai_review = ReviewResult(
                         summary=f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，发现 {len(all_comments)} 个问题。",
                         severity=max_severity,
-                        comments=all_comments[:20],  # 最多 20 条评论
+                        comments=all_comments[:MAX_COMMENTS_IN_REVIEW],  # 限制评论数量
                         action_items=[
                             f"{c.file}:{c.line} - {c.message}"
                             for c in all_comments
                             if c.severity.value in ("HIGH", "CRITICAL")
-                        ][:5],
+                        ][:MAX_ACTION_ITEMS],
                     )
 
                     console.print(f"[green]✓[/green] Agent 审查完成: 发现 {len(all_comments)} 个问题")
@@ -294,7 +300,7 @@ async def _run_analysis(
         context = ReviewContext(
             diff="",
             files_changed=[str(f.file_path) for f in all_findings if f.file_path],
-            security_findings=[{"severity": f.severity.value, "message": f.message} for f in all_findings[:20]],
+            security_findings=[{"severity": f.severity.value, "message": f.message} for f in all_findings[:MAX_SECURITY_FINDINGS_IN_CONTEXT]],
         )
 
         ai_review = await reviewer.review(context)
