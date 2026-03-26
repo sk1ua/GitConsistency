@@ -248,9 +248,9 @@ async def _run_analysis(
 
                 # 记录 Agent 指标
                 agent_duration_ms = (time.perf_counter() - agent_start) * 1000
-                agent_names = list(
-                    set(r.metadata.get("agent", "unknown") for r in agent_results)
-                ) if agent_results else []
+                agent_names = (
+                    list(set(r.metadata.get("agent", "unknown") for r in agent_results)) if agent_results else []
+                )
                 metrics.record_agents_used(agent_names, agent_duration_ms)
 
                 # 汇总 Agent 审查结果作为 AI Review
@@ -275,8 +275,7 @@ async def _run_analysis(
 
                     ai_review = ReviewResult(
                         summary=(
-                            f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，"
-                            f"发现 {len(all_comments)} 个问题。"
+                            f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，发现 {len(all_comments)} 个问题。"
                         ),
                         severity=max_severity,
                         comments=all_comments[:MAX_COMMENTS_IN_REVIEW],  # 限制评论数量
@@ -476,7 +475,7 @@ def _get_changed_files(base: str, console: Console) -> list[str] | None:
 
     # 验证 base 参数，防止命令注入
     # 只允许合法的分支名/引用字符：字母、数字、下划线、连字符、点、斜杠
-    if not re.match(r'^[\w./-]+$', base):
+    if not re.match(r"^[\w./-]+$", base):
         console.print(f"[red]✗ 非法的 base 参数: {base}[/red]")
         console.print("[dim]base 参数只能包含字母、数字、下划线、连字符、点和斜杠[/dim]")
         return None
