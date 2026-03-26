@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from consistency.report.formatters.sarif import SARIFFormatter
 from consistency.report.llm_generator import LLMReportGenerator
 from consistency.report.templates import ReportFormat, ReportTheme
 from consistency.reviewer.models import ReviewResult
@@ -72,7 +73,7 @@ class ReportGenerator:
             ValueError: 如果格式不受支持
         """
         # 验证格式
-        if format not in (ReportFormat.MARKDOWN, ReportFormat.HTML, ReportFormat.JSON):
+        if format not in (ReportFormat.MARKDOWN, ReportFormat.HTML, ReportFormat.JSON, ReportFormat.SARIF):
             raise ValueError(f"不支持的格式: {format}")
 
         # 如果有 ai_review，合并到 scan_results
@@ -93,6 +94,16 @@ class ReportGenerator:
 
         if format == ReportFormat.JSON:
             return self._generate_json(all_results, project_name, commit_sha, duration)
+
+        if format == ReportFormat.SARIF:
+            formatter = SARIFFormatter()
+            return formatter.generate(
+                scan_results=all_results,
+                ai_review=ai_review,
+                project_name=project_name,
+                commit_sha=commit_sha,
+                repository_uri=kwargs.get("repository_uri", ""),
+            )
 
         if format == ReportFormat.HTML:
             markdown = await self._llm_generator.generate(

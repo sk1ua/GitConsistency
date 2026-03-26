@@ -14,7 +14,7 @@ Attributes:
     __author__: 作者信息
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Sk1ua"
 __email__ = "sakuaikacn@gmail.com"
 __license__ = "MIT"

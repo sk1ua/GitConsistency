@@ -169,14 +169,31 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           PROJECT_PATH: ${{ github.event.inputs.project_path || '.' }}
         run: |
-          # 使用环境变量避免注入风险
+          # 检测服务可用性并记录
+          echo "🔍 服务状态检测:"
+
+          # LLM 状态
           if [ -n "$CONSISTENCY_LITELLM_API_KEY" ]; then
-            echo "✅ LLM API Key 已配置，将启用 AI 审查"
+            echo "  ✅ LLM API: 已配置"
+            echo "  LLM_STATUS=available" >> $GITHUB_ENV
             SKIP_AI_FLAG=""
           else
-            echo "⚠️ 未配置 LLM API Key，跳过 AI 审查"
+            echo "  ⚠️  LLM API: 未配置 (AI 审查将跳过)"
+            echo "  LLM_STATUS=unavailable" >> $GITHUB_ENV
             SKIP_AI_FLAG="--skip-ai"
           fi
+
+          # GitNexus 状态
+          if [ -n "$CONSISTENCY_GITNEXUS_MCP_URL" ]; then
+            echo "  ✅ GitNexus: 已配置"
+            echo "  GITNEXUS_STATUS=available" >> $GITHUB_ENV
+          else
+            echo "  ⚠️  GitNexus: 未配置 (调用链分析将跳过)"
+            echo "  GITNEXUS_STATUS=unavailable" >> $GITHUB_ENV
+          fi
+
+          echo ""
+          echo "🚀 开始代码分析..."
 
           # 干运行模式
           if [ "$DRY_RUN" == "true" ]; then
@@ -185,9 +202,7 @@ jobs:
             DRY_RUN_FLAG=""
           fi
 
-          # 使用系统 Python 运行（避免 uv run 隔离环境问题）
-          # 默认启用多 Agent 审查（--use-agents）
-          # PR 模式下使用增量扫描（--changed-only）
+          # PR 模式下使用 ci 命令，否则使用 analyze 命令
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
             echo "🤖 启用多 Agent 智能审查（SecurityAgent + LogicAgent + StyleAgent）"
             echo "📁 启用增量扫描模式"
@@ -210,43 +225,90 @@ jobs:
                 --base "$GITHUB_BASE_REF"
             fi
           else
-            if [ -n "$SKIP_AI_FLAG" ]; then
-              gitconsistency analyze \
-                --skip-ai \
-                --format markdown \
-                --output report.md
-            else
-              gitconsistency analyze \
-                --format markdown \
-                --output report.md
-            fi
+            # 非 PR 模式：生成三种格式的报告
+            echo "📝 生成 Markdown 报告..."
+            gitconsistency analyze \
+              $SKIP_AI_FLAG \
+              --format markdown \
+              --output report.md
+
+            echo "📝 生成 SARIF 报告..."
+            gitconsistency analyze \
+              $SKIP_AI_FLAG \
+              --format sarif \
+              --output report.sarif.json
+
+            echo "📝 生成 HTML 报告..."
+            gitconsistency analyze \
+              $SKIP_AI_FLAG \
+              --format html \
+              --output report.html
+
+            # 创建服务状态信息文件
+            echo "📊 生成服务状态报告..."
+            cat > service-status.md << EOF
+          # GitConsistency 服务状态
+
+          ## 执行信息
+          - **时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **提交**: ${{ github.sha }}
+          - **仓库**: ${{ github.repository }}
+
+          ## 服务可用性
+          | 服务 | 状态 | 说明 |
+          |------|------|------|
+          | LLM API | ${LLM_STATUS:-unknown} | ${LLM_STATUS:+${LLM_STATUS}} |
+          | GitNexus | ${GITNEXUS_STATUS:-unknown} | ${GITNEXUS_STATUS:+${GITNEXUS_STATUS}} |
+
+          ## 报告文件
+          - report.md - Markdown 格式报告（人类可读）
+          - report.sarif.json - SARIF 2.1.0 格式（供 vibe coding agent 使用）
+          - report.html - HTML 格式报告（可在浏览器中查看）
+          EOF
+
+            # 打包所有报告
+            echo "📦 打包报告..."
+            zip -r gitconsistency-reports.zip \
+              report.md \
+              report.sarif.json \
+              report.html \
+              service-status.md
+
+            echo ""
+            echo "✅ 报告生成完成:"
+            ls -lh gitconsistency-reports.zip report.* service-status.md 2>/dev/null || true
           fi
 
       # -----------------------------------------------------------------------
-      # 上传报告
+      # 上传报告（Push 事件上传所有格式）
       # -----------------------------------------------------------------------
-      - name: Upload Report
-        if: always()
+      - name: Upload Reports (Push)
+        if: github.event_name == 'push' && always()
         uses: actions/upload-artifact@v4
         with:
-          name: gitconsistency-report-${{ github.run_id }}
+          name: gitconsistency-reports-${{ github.run_id }}
           path: |
+            gitconsistency-reports.zip
             report.md
+            report.sarif.json
+            report.html
+            service-status.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # -----------------------------------------------------------------------
+      # 上传报告（PR 事件上传缓存数据）
+      # -----------------------------------------------------------------------
+      - name: Upload Cache (PR)
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitconsistency-cache-${{ github.run_id }}
+          path: |
             .cache/gitconsistency/
             data/
           retention-days: 7
           if-no-files-found: ignore
-
-      # -----------------------------------------------------------------------
-      # 上传 Markdown 摘要
-      # -----------------------------------------------------------------------
-      - name: Upload Summary
-        if: github.event_name == 'push' && always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitconsistency-summary
-          path: report.md
-          retention-days: 30
 
   # ===========================================================================
   # 快速检查（ruff + mypy）

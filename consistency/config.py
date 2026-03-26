@@ -21,6 +21,7 @@ class LLMConfig(BaseModel):
     model_config = {"extra": "ignore"}
 
     api_key: str | None = Field(default=None, description="LiteLLM API Key")
+    api_base: str | None = Field(default=None, description="API 基础 URL")
     model: str = Field(
         default="deepseek/deepseek-chat",
         description="默认 LLM 模型 (LiteLLM 格式)",
@@ -158,6 +159,11 @@ class Settings(BaseSettings):
     def litellm_api_key(self) -> str | None:
         """向后兼容: LLM API Key."""
         return self.llm.api_key
+
+    @property
+    def litellm_api_base(self) -> str | None:
+        """向后兼容: LLM API Base URL."""
+        return self.llm.api_base
 
     @property
     def litellm_model(self) -> str:

@@ -5,6 +5,45 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0] - 2026-03-26
+
+### 🎉 新版本发布
+
+GitConsistency v0.2.0 - 严格架构师审查模式
+
+### ✨ 新增功能
+
+#### 🤖 严格提示词系统
+
+- **20年架构师角色** - 苛刻标准，零容忍原则
+- **P0-P3 四级分级** - 阻断性/严重/中等/轻微问题分类
+- **分层诊断格式** - 使用 `<details>` 标签，严重问题默认展开
+- **建设性刻薄** - 严厉批评但提供具体修复方案
+
+#### 🔧 配置系统改进
+
+- **修复环境变量格式** - 使用双下划线 `CONSISTENCY_LLM__API_KEY` 支持嵌套配置
+- **添加 API_BASE 配置** - 支持自定义 LLM API 端点 (Deepseek/OpenAI 等)
+- **更新 .env.example** - 包含所有必要配置项和说明
+
+#### 🧪 测试和示例
+
+- **测试脚本** - `scripts/generate_test_reports.py` 生成本地示例报告
+- **示例报告** - 包含 Markdown、HTML、SARIF 格式示例
+
+### 🐛 Bug 修复
+
+- 修复 pydantic-settings 嵌套模型配置加载问题
+- 修复 Windows 终端编码问题
+- 修复 LLM 配置向后兼容性
+
+### 🗑️ 清理
+
+- 删除过时文档 (`docs/` 目录)
+- 删除示例项目 (`examples/sample-project/`)
+
+---
+
 ## [0.1.0] - 2026-03-22
 
 ### 🎉 初始发布

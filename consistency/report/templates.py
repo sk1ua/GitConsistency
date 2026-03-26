@@ -16,6 +16,7 @@ class ReportFormat(Enum):
     MARKDOWN = "markdown"
     JSON = "json"
     HTML = "html"
+    SARIF = "sarif"
 
 
 @dataclass

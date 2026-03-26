@@ -81,6 +81,7 @@ def _run_analyze_command(
             "markdown": ReportFormat.MARKDOWN,
             "json": ReportFormat.JSON,
             "html": ReportFormat.HTML,
+            "sarif": ReportFormat.SARIF,
         }
         report_format = format_map.get(format, ReportFormat.MARKDOWN)
 

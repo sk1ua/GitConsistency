@@ -92,6 +92,7 @@ class LLMProviderFactory:
         return LLMConfig(
             model=settings.litellm_model,
             api_key=settings.litellm_api_key,
+            api_base=settings.litellm_api_base,
             temperature=settings.litellm_temperature,
             max_tokens=settings.litellm_max_tokens,
             timeout=settings.litellm_timeout,
