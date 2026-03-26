@@ -84,6 +84,7 @@ def register_review_commands(review_app: typer.Typer, console: Console) -> None:
             $ gitconsistency review diff --target main
             $ gitconsistency review diff --quick
         """
+
         async def run() -> None:
             # 1. 获取 git diff
             diff_cmd = ["git", "diff"]
@@ -159,9 +160,7 @@ def register_review_commands(review_app: typer.Typer, console: Console) -> None:
 
                 # 提取变更的代码
                 changed_code = "\n".join(
-                    content for _, content in [
-                        line for hunk in file_diff.hunks for line in hunk.added_lines
-                    ]
+                    content for _, content in [line for hunk in file_diff.hunks for line in hunk.added_lines]
                 )
 
                 if not changed_code:

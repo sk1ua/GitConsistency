@@ -180,15 +180,11 @@ class SARIFFormatter(BaseFormatter):
                         "startLine": finding.line,
                     }
                     if finding.column:
-                        location["physicalLocation"]["region"]["startColumn"] = (
-                            finding.column
-                        )
+                        location["physicalLocation"]["region"]["startColumn"] = finding.column
 
                 # 添加代码片段
                 if finding.code_snippet:
-                    location["physicalLocation"]["region"]["snippet"] = {
-                        "text": finding.code_snippet
-                    }
+                    location["physicalLocation"]["region"]["snippet"] = {"text": finding.code_snippet}
 
                 result["locations"] = [location]
 
