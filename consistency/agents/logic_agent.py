@@ -106,6 +106,9 @@ class LogicAgent(BaseAgent):
         import asyncio
 
         try:
+            if self._llm is None:
+                logger.warning("LLM provider not available")
+                return None
             response = await asyncio.wait_for(
                 self._llm.complete_json(messages),
                 timeout=self.timeout,

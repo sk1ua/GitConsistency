@@ -127,6 +127,9 @@ class SecurityAgent(BaseAgent):
         import asyncio
 
         try:
+            if self._llm is None:
+                logger.warning("LLM provider not available")
+                return None
             response = await asyncio.wait_for(
                 self._llm.complete_json(messages),
                 timeout=self.timeout,
@@ -251,7 +254,7 @@ class SecurityAgent(BaseAgent):
 
         检查危险函数的调用链.
         """
-        findings = []
+        findings: list[dict[str, Any]] = []
 
         if self.gitnexus is None:
             return findings

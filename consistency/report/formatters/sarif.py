@@ -207,7 +207,7 @@ class SARIFFormatter(BaseFormatter):
 
     def save(
         self,
-        report: dict[str, Any],
+        report: str | dict[str, Any],
         output_path: Path,
     ) -> Path:
         """保存 SARIF 报告到文件.
