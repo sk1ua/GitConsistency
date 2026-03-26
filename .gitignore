@@ -244,6 +244,9 @@ data/
 *.db
 *.sqlite
 
+# Specify directory (local specs)
+.specify/
+
 # Reports
 report.md
 report.html

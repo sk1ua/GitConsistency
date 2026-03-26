@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from consistency import __version__
 from consistency.report.formatters.base import BaseFormatter
 from consistency.reviewer.models import ReviewResult
 from consistency.scanners.base import Finding, ScanResult, Severity
