@@ -122,7 +122,7 @@ def register_review_commands(review_app: typer.Typer, console: Console) -> None:
                             console.print(f"  - [{comment.severity.value}] {comment.message}")
                         all_issues += len(result.comments)
                     else:
-                        console.print(f"[path.name]: [green]✓ 通过[/green]")
+                        console.print("[path.name]: [green]✓ 通过[/green]")
                 except Exception as e:
                     console.print(f"\n[path.name]: [red]✗ 审查失败: {e}[/red]")
 

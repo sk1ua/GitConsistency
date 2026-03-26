@@ -248,7 +248,9 @@ async def _run_analysis(
 
                 # 记录 Agent 指标
                 agent_duration_ms = (time.perf_counter() - agent_start) * 1000
-                agent_names = list(set(r.metadata.get("agent", "unknown") for r in agent_results)) if agent_results else []
+                agent_names = list(
+                    set(r.metadata.get("agent", "unknown") for r in agent_results)
+                ) if agent_results else []
                 metrics.record_agents_used(agent_names, agent_duration_ms)
 
                 # 汇总 Agent 审查结果作为 AI Review
@@ -272,7 +274,10 @@ async def _run_analysis(
                             max_severity = Severity.MEDIUM
 
                     ai_review = ReviewResult(
-                        summary=f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，发现 {len(all_comments)} 个问题。",
+                        summary=(
+                            f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，"
+                            f"发现 {len(all_comments)} 个问题。"
+                        ),
                         severity=max_severity,
                         comments=all_comments[:MAX_COMMENTS_IN_REVIEW],  # 限制评论数量
                         action_items=[
@@ -300,7 +305,10 @@ async def _run_analysis(
         context = ReviewContext(
             diff="",
             files_changed=[str(f.file_path) for f in all_findings if f.file_path],
-            security_findings=[{"severity": f.severity.value, "message": f.message} for f in all_findings[:MAX_SECURITY_FINDINGS_IN_CONTEXT]],
+            security_findings=[
+                {"severity": f.severity.value, "message": f.message}
+                for f in all_findings[:MAX_SECURITY_FINDINGS_IN_CONTEXT]
+            ],
         )
 
         ai_review = await reviewer.review(context)

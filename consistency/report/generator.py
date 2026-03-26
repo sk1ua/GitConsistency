@@ -419,12 +419,23 @@ class ReportGenerator:
 <head>
     <title>GitConsistency Code Health Report</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; line-height: 1.6; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }}
         h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
         h2 {{ color: #34495e; margin-top: 30px; }}
         h3 {{ color: #7f8c8d; }}
         pre {{ background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }}
-        code {{ background: #f1f2f6; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', 'Monaco', monospace; }}
+        code {{
+            background: #f1f2f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }}
         li {{ margin: 5px 0; }}
         .severity-critical {{ color: #e74c3c; }}
         .severity-high {{ color: #e67e22; }}
