@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -21,7 +22,7 @@ from consistency.report.templates import ReportFormat
 from consistency.scanners.orchestrator import ScannerOrchestrator
 
 if TYPE_CHECKING:
-    import typer
+    pass
 
 
 def register_analyze_command(app: typer.Typer, console: Console) -> None:
@@ -111,14 +112,14 @@ def _run_analyze_command(
 
             console.print(traceback.format_exc())
             console.print(f"[dim]Error Code: {e.error_code}[/dim]")
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"\n[red]✗ 未知错误: {e}[/red]")
         if settings.debug:
             import traceback
 
             console.print(traceback.format_exc())
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
 
 
 async def _run_analysis(

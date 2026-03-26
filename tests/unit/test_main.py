@@ -2,7 +2,7 @@
 
 from typer.testing import CliRunner
 
-from consistency.main import app
+from consistency.cli.main import app
 
 runner = CliRunner()
 

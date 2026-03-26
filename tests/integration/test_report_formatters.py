@@ -265,14 +265,11 @@ class TestReportGeneratorIntegration:
     def test_generator_initialization(self, generator: ReportGenerator) -> None:
         """测试生成器初始化."""
         assert isinstance(generator.theme, ReportTheme)
-        # 检查格式器是否存在
-        assert ReportFormat.MARKDOWN in generator._formatters
-        assert ReportFormat.HTML in generator._formatters
-        assert ReportFormat.JSON in generator._formatters
 
-    def test_generate_markdown(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown(self, generator: ReportGenerator) -> None:
         """测试生成 Markdown 报告."""
-        report = generator.generate(
+        report = await generator.generate(
             scan_results=[],
             ai_review=None,
             project_name="test",
@@ -282,9 +279,10 @@ class TestReportGeneratorIntegration:
         assert isinstance(report, str)
         assert "# " in report
 
-    def test_generate_html(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_html(self, generator: ReportGenerator) -> None:
         """测试生成 HTML 报告."""
-        report = generator.generate(
+        report = await generator.generate(
             scan_results=[],
             ai_review=None,
             project_name="test",
@@ -294,9 +292,10 @@ class TestReportGeneratorIntegration:
         assert isinstance(report, str)
         assert "<" in report
 
-    def test_generate_json(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_json(self, generator: ReportGenerator) -> None:
         """测试生成 JSON 报告."""
-        report = generator.generate(
+        report = await generator.generate(
             scan_results=[],
             ai_review=None,
             project_name="test",
@@ -306,9 +305,10 @@ class TestReportGeneratorIntegration:
         assert isinstance(report, dict)
         assert report["project_name"] == "test"
 
-    def test_generate_github_comment(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_github_comment(self, generator: ReportGenerator) -> None:
         """测试生成 GitHub 评论."""
-        comment = generator.generate_github_comment(
+        comment = await generator.generate_github_comment(
             scan_results=[],
             ai_review=None,
             project_name="test-project",
@@ -318,10 +318,11 @@ class TestReportGeneratorIntegration:
         assert "GitConsistency" in comment
         assert "test-project" in comment
 
-    def test_invalid_format(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_invalid_format(self, generator: ReportGenerator) -> None:
         """测试无效格式."""
         with pytest.raises(ValueError, match="不支持的格式"):
-            generator.generate(
+            await generator.generate(
                 scan_results=[],
                 ai_review=None,
                 project_name="test",

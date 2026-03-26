@@ -88,7 +88,7 @@ def insecure_function(password):
         generator = ReportGenerator()
 
         # Markdown
-        md_report = generator.generate(
+        md_report = await generator.generate(
             list(scan_report.results.values()),
             format=ReportFormat.MARKDOWN,
         )
@@ -96,7 +96,7 @@ def insecure_function(password):
         assert "GitConsistency" in md_report
 
         # JSON
-        json_report = generator.generate(
+        json_report = await generator.generate(
             list(scan_report.results.values()),
             format=ReportFormat.JSON,
         )
@@ -128,7 +128,7 @@ class TestCLIE2E:
         """测试 CLI 帮助."""
         from typer.testing import CliRunner
 
-        from consistency.main import app
+        from consistency.cli.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["--help"])
@@ -140,7 +140,7 @@ class TestCLIE2E:
         """测试 CLI 版本."""
         from typer.testing import CliRunner
 
-        from consistency.main import app
+        from consistency.cli.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["--version"])
@@ -152,7 +152,7 @@ class TestCLIE2E:
         """测试配置验证命令."""
         from typer.testing import CliRunner
 
-        from consistency.main import app
+        from consistency.cli.main import app
 
         runner = CliRunner()
         result = runner.invoke(app, ["config", "validate"])

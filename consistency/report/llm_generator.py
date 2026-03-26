@@ -5,9 +5,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
+
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from consistency.llm import LLMProviderFactory
 from consistency.scanners.base import Finding, ScanResult
@@ -21,19 +24,48 @@ class LLMReportGenerator:
     所有报告内容均由 LLM 生成，提供自然语言、上下文感知的报告。
     """
 
+    # LLM 调用超时时间（秒）
+    LLM_TIMEOUT_SECONDS = 60
+    # 最大重试次数
+    MAX_RETRIES = 3
+
     def __init__(self) -> None:
         """初始化 LLM 报告生成器."""
         self.llm = LLMProviderFactory.create_from_settings()
 
+    @retry(
+        stop=stop_after_attempt(MAX_RETRIES),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((asyncio.TimeoutError, ConnectionError)),
+        reraise=True,
+    )
     async def _call_llm(self, prompt: str) -> str:
-        """调用 LLM 生成内容."""
+        """调用 LLM 生成内容.
+
+        Args:
+            prompt: 提示词内容
+
+        Returns:
+            LLM 生成的文本
+
+        Raises:
+            asyncio.TimeoutError: 当 LLM 调用超时
+            ConnectionError: 当连接失败且重试耗尽
+        """
         messages = [
             {"role": "system", "content": "你是一个专业的代码审查报告生成专家。"},
             {"role": "user", "content": prompt},
         ]
         try:
-            response = await self.llm.complete(messages=messages)
+            # 使用 asyncio.wait_for 添加超时控制
+            response = await asyncio.wait_for(
+                self.llm.complete(messages=messages),
+                timeout=self.LLM_TIMEOUT_SECONDS,
+            )
             return response.content.strip()
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM 调用超时（{self.LLM_TIMEOUT_SECONDS}秒）")
+            raise
         except Exception as e:
             logger.error(f"LLM 调用失败: {e}")
             raise
@@ -393,7 +425,7 @@ class LLMReportGenerator:
     ) -> str:
         """当 LLM 失败时的备用报告."""
         lines = [
-            "# 🔍 GitConsistency Code Review Report",
+            "# 🔍 GitConsistency Code Health Report",
             "",
             f"> **Project**: {project_name}",
             f"> **Commit**: `{commit_sha[:8] if commit_sha else 'unknown'}`",
@@ -442,14 +474,11 @@ class LLMReportGenerator:
         summary_line = f"🔴 严重问题 {crit_count} 项    🟠 中等问题 {high_count} 项    🟢 轻微问题 {med_count} 项"
 
         lines = [
-            "# 🔍 GitConsistency 代码审查报告",
+            "# 🔍 GitConsistency Code Review Report",
             "",
-            "```",
+            f"**项目**: {project_name} | **提交**: `{commit_sha[:8] if commit_sha else 'HEAD'}`",
+            "",
             summary_line,
-            "```",
-            "",
-            f"> **项目**: {project_name}",
-            f"> **提交**: `{commit_sha[:8] if commit_sha else 'HEAD'}`",
             "",
             f"发现 {total} 个问题，请查看完整报告获取详细信息。",
             "",

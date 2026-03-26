@@ -6,6 +6,7 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import typer
 from rich.panel import Panel
 
 from consistency.cli.banner import print_banner
@@ -16,7 +17,6 @@ from consistency.report.generator import ReportGenerator
 from consistency.scanners.orchestrator import ScannerOrchestrator
 
 if TYPE_CHECKING:
-    import typer
     from rich.console import Console
 
     from consistency.config import Settings
@@ -58,19 +58,19 @@ def _run_ci_command(
 
     if not GitHubIntegration.is_github_actions():
         console.print("[yellow]⚠[/yellow] 未检测到 CI 环境，请在 GitHub Actions 中运行")
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
 
     env_info = GitHubIntegration.detect_from_env()
     if not env_info:
         console.print("[red]✗[/red] 无法获取 CI 环境信息")
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
 
     repo = env_info.get("repository")
     actual_pr_number = pr_number or env_info.get("pr_number")
 
     if not repo or not actual_pr_number:
         console.print("[red]✗[/red] 无法获取仓库或 PR 信息")
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
 
     # 获取变更文件列表（如果启用增量扫描）
     changed_files = None
@@ -128,7 +128,7 @@ def _run_ci_command(
             except GitHubError as e:
                 console.print(f"\n[red]✗ 评论发布失败: {e.message}[/red]")
                 console.print(f"[dim]Error Code: {e.error_code}[/dim]")
-                raise Exception("Exit 1")
+                raise typer.Exit(1)
 
         # 2. 写入 Actions Summary
         _write_actions_summary(result, generator, repo, console)
@@ -145,10 +145,10 @@ def _run_ci_command(
         console.print(f"\n[red]✗ CI 分析失败: {e.message}[/red]")
         if settings.debug:
             console.print(f"[dim]Error Code: {e.error_code}[/dim]")
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"\n[red]✗ CI 分析失败: {e}[/red]")
-        raise Exception("Exit 1")
+        raise typer.Exit(1)
 
 
 async def _run_analysis(
@@ -200,89 +200,90 @@ async def _run_analysis(
     ai_review = None
     agent_reviews = None
 
-    # 多 Agent 审查（优先使用）
+    # 多 Agent 审查（优先使用，如果 GitNexus 可用）
     if use_agents and not skip_ai:
-        import time
-
-        from consistency.agents import ReviewSupervisor
         from consistency.core.gitnexus_client import GitNexusClient
 
-        agent_start = time.perf_counter()
-        console.print("[blue]🤖 启用多 Agent 智能审查...[/blue]")
+        # 检查 GitNexus 是否可用
+        if GitNexusClient.is_available():
+            import time
 
-        # 初始化 GitNexus（现在为必需）
-        if not GitNexusClient.is_available():
-            console.print("[red]✗ GitNexus 未安装，但它是必需的组件[/red]")
-            console.print("[dim]请安装 GitNexus: npm install -g gitnexus[/dim]")
-            raise Exception("Exit 1")
+            from consistency.agents import ReviewSupervisor
 
-        gitnexus = GitNexusClient()
-        console.print("[green]✓[/green] GitNexus 代码知识图谱已启用")
+            agent_start = time.perf_counter()
+            console.print("[blue]🤖 启用多 Agent 智能审查...[/blue]")
 
-        # 创建 Supervisor 并运行多 Agent 审查
-        supervisor = ReviewSupervisor(
-            gitnexus_client=gitnexus,
-            quick_mode=False,  # CI 中使用完整模式
-        )
+            gitnexus = GitNexusClient()
+            console.print("[green]✓[/green] GitNexus 代码知识图谱已启用")
 
-        # 对发现的文件进行 Agent 审查
-        files_to_review = list(set(str(f.file_path) for f in all_findings if f.file_path))
+            # 创建 Supervisor 并运行多 Agent 审查
+            supervisor = ReviewSupervisor(
+                gitnexus_client=gitnexus,
+                quick_mode=False,  # CI 中使用完整模式
+            )
 
-        if files_to_review:
-            console.print(f"[blue]🔍 Agent 正在审查 {len(files_to_review)} 个文件...[/blue]")
+            # 对发现的文件进行 Agent 审查
+            files_to_review = list(set(str(f.file_path) for f in all_findings if f.file_path))
 
-            agent_results: list[ReviewResult] = []
-            for file_path_str in files_to_review[:10]:  # 最多审查 10 个文件
-                file_path = Path(file_path_str)
-                if file_path.exists():
-                    try:
-                        result = await supervisor.review(file_path, file_path.read_text(encoding="utf-8"))
-                        agent_results.append(result)
-                    except Exception as e:
-                        console.print(f"[yellow]! 审查 {file_path.name} 失败: {e}[/yellow]")
+            if files_to_review:
+                console.print(f"[blue]🔍 Agent 正在审查 {len(files_to_review)} 个文件...[/blue]")
 
-            agent_reviews = agent_results
+                agent_results: list[ReviewResult] = []
+                for file_path_str in files_to_review[:10]:  # 最多审查 10 个文件
+                    file_path = Path(file_path_str)
+                    if file_path.exists():
+                        try:
+                            result = await supervisor.review(file_path, file_path.read_text(encoding="utf-8"))
+                            agent_results.append(result)
+                        except Exception as e:
+                            console.print(f"[yellow]! 审查 {file_path.name} 失败: {e}[/yellow]")
 
-            # 记录 Agent 指标
-            agent_duration_ms = (time.perf_counter() - agent_start) * 1000
-            agent_names = list(set(r.metadata.get("agent", "unknown") for r in agent_results)) if agent_results else []
-            metrics.record_agents_used(agent_names, agent_duration_ms)
+                agent_reviews = agent_results
 
-            # 汇总 Agent 审查结果作为 AI Review
-            if agent_results:
-                from consistency.reviewer.models import ReviewResult, Severity
+                # 记录 Agent 指标
+                agent_duration_ms = (time.perf_counter() - agent_start) * 1000
+                agent_names = list(set(r.metadata.get("agent", "unknown") for r in agent_results)) if agent_results else []
+                metrics.record_agents_used(agent_names, agent_duration_ms)
 
-                all_comments = []
-                summaries = []
-                for ar in agent_results:
-                    all_comments.extend(ar.comments)
-                    summaries.append(ar.summary)
+                # 汇总 Agent 审查结果作为 AI Review
+                if agent_results:
+                    from consistency.reviewer.models import ReviewResult, Severity
 
-                # 确定最高严重级别
-                max_severity = Severity.LOW
-                for ar in agent_results:
-                    if ar.severity.value == "CRITICAL":
-                        max_severity = Severity.CRITICAL
-                    elif ar.severity.value == "HIGH" and max_severity.value != "CRITICAL":
-                        max_severity = Severity.HIGH
-                    elif ar.severity.value == "MEDIUM" and max_severity.value in ("LOW", "INFO"):
-                        max_severity = Severity.MEDIUM
+                    all_comments = []
+                    summaries = []
+                    for ar in agent_results:
+                        all_comments.extend(ar.comments)
+                        summaries.append(ar.summary)
 
-                ai_review = ReviewResult(
-                    summary=f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，发现 {len(all_comments)} 个问题。",
-                    severity=max_severity,
-                    comments=all_comments[:20],  # 最多 20 条评论
-                    action_items=[
-                        f"{c.file}:{c.line} - {c.message}"
-                        for c in all_comments
-                        if c.severity.value in ("HIGH", "CRITICAL")
-                    ][:5],
-                )
+                    # 确定最高严重级别
+                    max_severity = Severity.LOW
+                    for ar in agent_results:
+                        if ar.severity.value == "CRITICAL":
+                            max_severity = Severity.CRITICAL
+                        elif ar.severity.value == "HIGH" and max_severity.value != "CRITICAL":
+                            max_severity = Severity.HIGH
+                        elif ar.severity.value == "MEDIUM" and max_severity.value in ("LOW", "INFO"):
+                            max_severity = Severity.MEDIUM
 
-                console.print(f"[green]✓[/green] Agent 审查完成: 发现 {len(all_comments)} 个问题")
+                    ai_review = ReviewResult(
+                        summary=f"多 Agent 审查完成。审查了 {len(agent_results)} 个文件，发现 {len(all_comments)} 个问题。",
+                        severity=max_severity,
+                        comments=all_comments[:20],  # 最多 20 条评论
+                        action_items=[
+                            f"{c.file}:{c.line} - {c.message}"
+                            for c in all_comments
+                            if c.severity.value in ("HIGH", "CRITICAL")
+                        ][:5],
+                    )
 
-    # 回退到传统 AI 审查
-    elif not skip_ai and settings.is_litellm_configured:
+                    console.print(f"[green]✓[/green] Agent 审查完成: 发现 {len(all_comments)} 个问题")
+        else:
+            # GitNexus 不可用，降级到传统 AI 审查
+            console.print("[yellow]⚠ GitNexus 未安装，降级到传统 AI 审查[/yellow]")
+            console.print("[dim]提示: 安装 GitNexus 可启用多 Agent 智能审查: npm install -g gitnexus[/dim]")
+
+    # 传统 AI 审查（当启用 AI 且未跳过，且没有使用 Agent 审查时）
+    if not skip_ai and settings.is_litellm_configured and ai_review is None:
         import time
 
         ai_start = time.perf_counter()
@@ -456,7 +457,15 @@ def _set_actions_outputs(result: dict[str, Any]) -> None:
 
 def _get_changed_files(base: str, console: Console) -> list[str] | None:
     """获取相对于 base 分支的变更文件列表."""
+    import re
     import subprocess
+
+    # 验证 base 参数，防止命令注入
+    # 只允许合法的分支名/引用字符：字母、数字、下划线、连字符、点、斜杠
+    if not re.match(r'^[\w./-]+$', base):
+        console.print(f"[red]✗ 非法的 base 参数: {base}[/red]")
+        console.print("[dim]base 参数只能包含字母、数字、下划线、连字符、点和斜杠[/dim]")
+        return None
 
     try:
         # 获取当前分支与 base 的差异文件

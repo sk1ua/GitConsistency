@@ -29,6 +29,12 @@ class MockGitNexusClient:
         return f"Mock context for {query_type}"
 
 
+@pytest.fixture
+def gitnexus_client() -> MockGitNexusClient:
+    """创建 Mock GitNexus 客户端."""
+    return MockGitNexusClient()
+
+
 class TestAgentBase:
     """Agent 基类测试."""
 
@@ -130,9 +136,9 @@ class TestStyleAgentIntegration:
     """Style Agent 集成测试."""
 
     @pytest.fixture
-    def style_agent(self) -> StyleAgent:
+    def style_agent(self, gitnexus_client: MockGitNexusClient) -> StyleAgent:
         """创建 Style Agent."""
-        return StyleAgent()
+        return StyleAgent(gitnexus_client)
 
     @pytest.mark.asyncio
     async def test_style_agent_analyze(self, style_agent: StyleAgent) -> None:
@@ -330,8 +336,13 @@ def hello():
 class TestReviewConvenienceFunctions:
     """便捷函数测试."""
 
+    @pytest.fixture
+    def mock_gitnexus(self) -> MockGitNexusClient:
+        """创建 Mock GitNexus 客户端."""
+        return MockGitNexusClient()
+
     @pytest.mark.asyncio
-    async def test_review_code(self) -> None:
+    async def test_review_code(self, mock_gitnexus: MockGitNexusClient) -> None:
         """测试 review_code 便捷函数."""
         with patch("consistency.agents.supervisor.ReviewSupervisor.review") as mock_review:
             mock_review.return_value = ReviewResult(
@@ -339,13 +350,13 @@ class TestReviewConvenienceFunctions:
                 severity=Severity.LOW,
             )
 
-            result = await review_code(Path("test.py"), "code", quick=True)
+            result = await review_code(Path("test.py"), "code", gitnexus_client=mock_gitnexus, quick=True)
 
             assert isinstance(result, ReviewResult)
             mock_review.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_review_files(self) -> None:
+    async def test_review_files(self, mock_gitnexus: MockGitNexusClient) -> None:
         """测试 review_files 便捷函数."""
         with patch("consistency.agents.supervisor.ReviewSupervisor.review_batch") as mock_batch:
             mock_batch.return_value = [
@@ -354,7 +365,7 @@ class TestReviewConvenienceFunctions:
             ]
 
             files = [(Path("f1.py"), "code1"), (Path("f2.py"), "code2")]
-            results = await review_files(files, quick=False)
+            results = await review_files(files, gitnexus_client=mock_gitnexus, quick=False)
 
             assert len(results) == 2
             mock_batch.assert_called_once()

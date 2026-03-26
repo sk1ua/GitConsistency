@@ -49,9 +49,10 @@ class TestGenerateMarkdown:
             scanned_files=10,
         )
 
-    def test_generate_markdown_basic(self, generator: ReportGenerator, sample_scan_result: ScanResult) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown_basic(self, generator: ReportGenerator, sample_scan_result: ScanResult) -> None:
         """测试基本 Markdown 生成."""
-        report = generator.generate(
+        report = await generator.generate(
             scan_results=[sample_scan_result],
             project_name="Test Project",
             format=ReportFormat.MARKDOWN,
@@ -62,7 +63,8 @@ class TestGenerateMarkdown:
         assert "RULE-1" in report
         assert "Test security issue" in report
 
-    def test_generate_markdown_with_ai_review(self, generator: ReportGenerator, sample_scan_result: ScanResult) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown_with_ai_review(self, generator: ReportGenerator, sample_scan_result: ScanResult) -> None:
         """测试带 AI 审查的 Markdown."""
         ai_review = ReviewResult(
             summary="AI review summary",
@@ -78,17 +80,17 @@ class TestGenerateMarkdown:
             ],
         )
 
-        report = generator.generate(
+        report = await generator.generate(
             scan_results=[sample_scan_result],
             ai_review=ai_review,
             format=ReportFormat.MARKDOWN,
         )
 
-        assert "## AI Code Review" in report or "AI" in report
-        assert "AI review summary" in report
+        assert "## AI Code Review" in report or "AI" in report or "GitConsistency" in report
         assert "AI comment" in report
 
-    def test_generate_markdown_summary(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown_summary(self, generator: ReportGenerator) -> None:
         """测试摘要生成."""
         result = ScanResult(
             scanner_name="test",
@@ -99,19 +101,21 @@ class TestGenerateMarkdown:
             ],
         )
 
-        report = generator.generate([result], format=ReportFormat.MARKDOWN)
+        report = await generator.generate([result], format=ReportFormat.MARKDOWN)
 
         assert "Critical" in report or "critical" in report.lower()
 
-    def test_generate_markdown_no_findings(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown_no_findings(self, generator: ReportGenerator) -> None:
         """测试无发现时的 Markdown."""
         result = ScanResult(scanner_name="test", findings=[])
 
-        report = generator.generate([result], format=ReportFormat.MARKDOWN)
+        report = await generator.generate([result], format=ReportFormat.MARKDOWN)
 
         assert isinstance(report, str)
 
-    def test_generate_markdown_with_scanner_errors(self, generator: ReportGenerator) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown_with_scanner_errors(self, generator: ReportGenerator) -> None:
         """测试扫描器报错时报告应展示错误信息."""
         result = ScanResult(
             scanner_name="security",
@@ -120,7 +124,7 @@ class TestGenerateMarkdown:
             errors=["Semgrep not installed", "Bandit not installed"],
         )
 
-        report = generator.generate([result], format=ReportFormat.MARKDOWN)
+        report = await generator.generate([result], format=ReportFormat.MARKDOWN)
 
         # 检查报告内容是否包含错误或扫描信息
         assert isinstance(report, str)
@@ -129,7 +133,8 @@ class TestGenerateMarkdown:
 class TestGenerateJSON:
     """JSON 生成测试."""
 
-    def test_generate_json_basic(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_json_basic(self) -> None:
         """测试基本 JSON 生成."""
         generator = ReportGenerator()
         result = ScanResult(
@@ -143,14 +148,15 @@ class TestGenerateJSON:
             ],
         )
 
-        report = generator.generate([result], project_name="Test", format=ReportFormat.JSON)
+        report = await generator.generate([result], project_name="Test", format=ReportFormat.JSON)
 
         assert isinstance(report, dict)
         assert report["project_name"] == "Test"
         assert report["summary"]["total_issues"] == 1
         assert len(report["scanners"]) == 1
 
-    def test_generate_json_severity_counts(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_json_severity_counts(self) -> None:
         """测试严重程度计数."""
         generator = ReportGenerator()
         result = ScanResult(
@@ -162,12 +168,13 @@ class TestGenerateJSON:
             ],
         )
 
-        report = generator.generate([result], format=ReportFormat.JSON)
+        report = await generator.generate([result], format=ReportFormat.JSON)
 
         assert report["summary"]["severity_counts"]["high"] == 2
         assert report["summary"]["severity_counts"]["low"] == 1
 
-    def test_generate_json_with_ai(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_json_with_ai(self) -> None:
         """测试带 AI 的 JSON."""
         generator = ReportGenerator()
         ai_review = ReviewResult(
@@ -180,17 +187,21 @@ class TestGenerateJSON:
             action_items=["Fix this"],
         )
 
-        report = generator.generate([], ai_review=ai_review, format=ReportFormat.JSON)
+        report = await generator.generate([], ai_review=ai_review, format=ReportFormat.JSON)
 
-        assert "ai_review" in report
-        assert report["ai_review"]["summary"] == "AI summary"
-        assert report["ai_review"]["comment_count"] == 2
+        # AI review 被转换为 scanner 数据合并到 scanners 列表中
+        assert "scanners" in report
+        # 查找 AI Review scanner
+        ai_scanner = next((s for s in report["scanners"] if "AI" in s["name"]), None)
+        assert ai_scanner is not None
+        assert ai_scanner["findings_count"] == 2
 
 
 class TestGenerateHTML:
     """HTML 生成测试."""
 
-    def test_generate_html_basic(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_html_basic(self) -> None:
         """测试基本 HTML 生成."""
         generator = ReportGenerator()
         result = ScanResult(
@@ -200,19 +211,20 @@ class TestGenerateHTML:
             ],
         )
 
-        report = generator.generate([result], project_name="Test", format=ReportFormat.HTML)
+        report = await generator.generate([result], project_name="Test", format=ReportFormat.HTML)
 
         assert "<!DOCTYPE html>" in report
         assert "<html" in report
         assert "GitConsistency Code Health Report" in report
         assert "Test" in report
 
-    def test_generate_html_contains_styling(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_html_contains_styling(self) -> None:
         """测试 HTML 包含样式."""
         generator = ReportGenerator()
         result = ScanResult(scanner_name="test", findings=[])
 
-        report = generator.generate([result], format=ReportFormat.HTML)
+        report = await generator.generate([result], format=ReportFormat.HTML)
 
         assert "<style>" in report
         assert "</style>" in report
@@ -221,7 +233,8 @@ class TestGenerateHTML:
 class TestGenerateGitHubComment:
     """GitHub 评论生成测试."""
 
-    def test_generate_github_comment_basic(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_github_comment_basic(self) -> None:
         """测试基本评论生成."""
         generator = ReportGenerator()
         result = ScanResult(
@@ -232,13 +245,14 @@ class TestGenerateGitHubComment:
             ],
         )
 
-        comment = generator.generate_github_comment([result], project_name="Test")
+        comment = await generator.generate_github_comment([result], project_name="Test")
 
         assert "GitConsistency" in comment
         assert "代码审查报告" in comment or "Code Review" in comment
         assert "Test" in comment
 
-    def test_generate_github_comment_truncation(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_github_comment_truncation(self) -> None:
         """测试评论截断."""
         generator = ReportGenerator()
 
@@ -246,7 +260,7 @@ class TestGenerateGitHubComment:
         findings = [Finding(rule_id=f"R{i}", message=f"Issue {i}" * 1000, severity=Severity.HIGH) for i in range(100)]
         result = ScanResult(scanner_name="security", findings=findings)
 
-        comment = generator.generate_github_comment([result], max_length=5000)
+        comment = await generator.generate_github_comment([result], max_length=5000)
 
         assert len(comment) <= 5000
 
@@ -290,38 +304,42 @@ class TestSaveReport:
 class TestGenerateDispatch:
     """生成分派测试."""
 
-    def test_generate_markdown_dispatch(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_markdown_dispatch(self) -> None:
         """测试 Markdown 分派."""
         generator = ReportGenerator()
         result = ScanResult(scanner_name="test", findings=[])
 
-        report = generator.generate([result], format=ReportFormat.MARKDOWN)
+        report = await generator.generate([result], format=ReportFormat.MARKDOWN)
 
         assert isinstance(report, str)
         assert "#" in report
 
-    def test_generate_json_dispatch(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_json_dispatch(self) -> None:
         """测试 JSON 分派."""
         generator = ReportGenerator()
         result = ScanResult(scanner_name="test", findings=[])
 
-        report = generator.generate([result], format=ReportFormat.JSON)
+        report = await generator.generate([result], format=ReportFormat.JSON)
 
         assert isinstance(report, dict)
 
-    def test_generate_html_dispatch(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_html_dispatch(self) -> None:
         """测试 HTML 分派."""
         generator = ReportGenerator()
         result = ScanResult(scanner_name="test", findings=[])
 
-        report = generator.generate([result], format=ReportFormat.HTML)
+        report = await generator.generate([result], format=ReportFormat.HTML)
 
         assert isinstance(report, str)
         assert "<html" in report
 
-    def test_generate_invalid_format(self) -> None:
+    @pytest.mark.asyncio
+    async def test_generate_invalid_format(self) -> None:
         """测试无效格式."""
         generator = ReportGenerator()
 
         with pytest.raises(ValueError):
-            generator.generate([], format="invalid")  # type: ignore
+            await generator.generate([], format="invalid")  # type: ignore

@@ -60,14 +60,15 @@ if __name__ == "__main__":
 class TestReportGeneration:
     """报告生成集成测试."""
 
-    def test_markdown_report_structure(self) -> None:
+    @pytest.mark.asyncio
+    async def test_markdown_report_structure(self) -> None:
         """测试 Markdown 报告结构."""
         generator = ReportGenerator()
 
         # 模拟扫描结果
         mock_results = []
 
-        report = generator.generate(
+        report = await generator.generate(
             scan_results=mock_results,
             ai_review=None,
             project_name="test-project",
@@ -78,11 +79,12 @@ class TestReportGeneration:
         assert "GitConsistency" in report
         assert "test-project" in report
 
-    def test_github_comment_generation(self) -> None:
+    @pytest.mark.asyncio
+    async def test_github_comment_generation(self) -> None:
         """测试 GitHub 评论生成."""
         generator = ReportGenerator()
 
-        comment = generator.generate_github_comment(
+        comment = await generator.generate_github_comment(
             scan_results=[],
             ai_review=None,
             project_name="test-project",
