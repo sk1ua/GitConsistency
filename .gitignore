@@ -247,10 +247,10 @@ data/
 # Specify directory (local specs)
 .specify/
 
-# Reports
-report.md
-report.html
-report.json
+# Reports (root directory only)
+/report.md
+/report.html
+/report.json
 *.report.md
 *.report.html
 *.report.json
