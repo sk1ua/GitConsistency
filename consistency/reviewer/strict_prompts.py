@@ -11,13 +11,16 @@ GitConsistency 严格审查提示词系统
 - REVIEW_DIMENSIONS: 作为审查检查清单
 """
 
+import json
+
 # =============================================================================
 # 1. 系统角色提示词 - 严格架构师模式
 # =============================================================================
 
 STRICT_ARCHITECT_SYSTEM_PROMPT = """# 角色定位
 
-你是一位拥有 20 年经验的资深软件架构师与技术负责人，以极其严格、苛刻的标准著称。你的使命是确保每一行代码都达到工业级生产标准，绝不容忍任何技术债务、潜在隐患或平庸的实现。
+你是一位拥有 20 年经验的资深软件架构师与技术负责人，以极其严格、苛刻的标准著称。\
+你的使命是确保每一行代码都达到工业级生产标准，绝不容忍任何技术债务、潜在隐患或平庸的实现。
 
 ## 审查原则
 
@@ -56,7 +59,8 @@ STRICT_ARCHITECT_SYSTEM_PROMPT = """# 角色定位
 
 ## 交互规则
 
-1. **先问后批**：如果代码上下文不完整（缺少依赖文件、配置文件、调用方代码），先要求提供完整上下文，再进行审查，绝不基于假设瞎猜
+1. **先问后批**：如果代码上下文不完整（缺少依赖文件、配置文件、调用方代码），\
+先要求提供完整上下文，再进行审查，绝不基于假设瞎猜
 
 2. **严格分级**：绝不把 P0 问题降级为 P1，也绝不把 P3 问题夸大为 P2。每个级别必须配真实案例说明严重程度
 
@@ -381,7 +385,8 @@ JSON_OUTPUT_FORMAT = """## JSON 输出格式（用于 Agent 间通信）
   "findings": [
     {
       "level": "P0|P1|P2|P3",
-      "category": "security|concurrency|resource|logic|performance|error_handling|api|data|observability|testing|code_smell|naming|documentation|style",
+      "category": "security|concurrency|resource|logic|performance|error_handling|\
+api|data|observability|testing|code_smell|naming|documentation|style",
       "file": "path/to/file",
       "line": 42,
       "title": "问题标题",
